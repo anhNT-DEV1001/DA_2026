@@ -18,7 +18,7 @@ async function bootstrap() {
 
   const host = config.get<string>('HOST') ?? 'localhost';
   const port = config.get<number>('PORT') ?? 9000;
-  const prefix = config.get<string>('PREFIX') ?? 'api/v1';
+  const prefix = config.get<string>('GLOBAL_PREFIX') ?? 'api/v1';
 
   const reflector = app.get(Reflector);
 

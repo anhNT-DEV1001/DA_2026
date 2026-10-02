@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { PaginanteRequest } from '../../../common/requests/index.js';
 
 export class RoleDto {
@@ -19,4 +26,21 @@ export class RoleRequest extends PaginanteRequest {
   @IsOptional()
   @IsString()
   name?: string;
+}
+
+export class AssignRolePermissionDto {
+  @ApiProperty({ example: 1, description: 'ID của Permission' })
+  @IsInt({ message: 'ID thao tác phải là số nguyên.' })
+  @IsNotEmpty({ message: 'Vui lòng chọn ID thao tác.' })
+  permissionId: number;
+}
+
+export class UpdateRolePermissionsDto {
+  @ApiProperty({
+    example: [1, 2, 3],
+    description: 'Danh sách ID của các Permission',
+  })
+  @IsArray({ message: 'Danh sách ID thao tác phải là mảng.' })
+  @IsInt({ each: true, message: 'Mỗi ID thao tác phải là số nguyên.' })
+  permissionIds: number[];
 }

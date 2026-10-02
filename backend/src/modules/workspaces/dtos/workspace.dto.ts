@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -12,6 +13,7 @@ import { PaginanteRequest } from '../../../common/requests/index.js';
 
 export class CreateWorkspaceDto {
   @ApiProperty({
+    example: 'Không gian làm việc DA 2026',
     description: 'Tên không gian làm việc',
   })
   @IsString({ message: 'Tên workspace phải là chuỗi ký tự.' })
@@ -20,7 +22,7 @@ export class CreateWorkspaceDto {
   name: string;
 
   @ApiPropertyOptional({
-    example: 'Không gian làm việc cho các dự án nội bộ',
+    example: 'Không gian làm việc cho các dự án nội bộ công ty',
     description: 'Mô tả chi tiết về workspace',
   })
   @IsOptional()
@@ -29,14 +31,26 @@ export class CreateWorkspaceDto {
   description?: string;
 
   @ApiPropertyOptional({
-    example: 'workspace-cong-ty-abc',
+    example: 'workspace-da-2026',
     description:
-      'Đường dẫn định danh duy nhất (slug), có thể tự động sinh từ tên',
+      'Đường dẫn định danh duy nhất (slug), tự động sinh từ tên nếu để trống',
   })
   @IsOptional()
   @IsString({ message: 'Slug phải là chuỗi ký tự.' })
   @MaxLength(255, { message: 'Slug không được vượt quá 255 ký tự.' })
   slug?: string;
+
+  @ApiPropertyOptional({
+    example: 'private',
+    enum: ['public', 'private'],
+    description: 'Chế độ hiển thị: public hoặc private',
+    default: 'private',
+  })
+  @IsOptional()
+  @IsEnum(['public', 'private'], {
+    message: 'Chế độ workspace phải là public hoặc private.',
+  })
+  mode?: 'public' | 'private';
 
   @ApiPropertyOptional({
     example: 1,
@@ -54,11 +68,20 @@ export class UpdateWorkspaceDto extends PartialType(CreateWorkspaceDto) {}
 export class WorkspaceRequest extends PaginanteRequest {
   @ApiPropertyOptional({
     example: 'Công Ty ABC',
-    description: 'Từ khóa tìm kiếm theo tên hoặc slug',
+    description: 'Từ khóa tìm kiếm theo tên hoặc slug hoặc mô tả',
   })
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({
+    example: 'private',
+    enum: ['public', 'private'],
+    description: 'Lọc theo chế độ workspace (public / private)',
+  })
+  @IsOptional()
+  @IsEnum(['public', 'private'])
+  mode?: 'public' | 'private';
 
   @ApiPropertyOptional({
     example: 1,

@@ -15,7 +15,7 @@ export function useSidebarMenus() {
   return useQuery({
     queryKey: MENU_QUERY_KEYS.sidebar,
     queryFn: () => menuService.getSidebarMenus(),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30s
   });
 }
 

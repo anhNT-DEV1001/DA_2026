@@ -27,6 +27,12 @@ import { JwtAccessGuard } from '../../auth/guards/index.js';
 export class MasterDataController {
   constructor(private readonly masterDataService: MasterDataService) {}
 
+  @Get('groups/all')
+  @ApiOperation({ summary: 'Lấy danh sách nhóm master data' })
+  async getAllGroups() {
+    return this.masterDataService.getAllGroups();
+  }
+
   @Get(':group')
   @ApiOperation({ summary: 'Lấy danh sách master data theo nhóm' })
   @ApiParam({ name: 'group', example: 'GENDER', type: String })

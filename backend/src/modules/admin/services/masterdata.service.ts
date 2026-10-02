@@ -12,6 +12,20 @@ export class MasterDataService {
     private readonly masterDataRepo: Repository<MasterData>,
   ) {}
 
+  async getAllGroups() {
+    const groups = await this.masterDataRepo
+      .createQueryBuilder('md')
+      .select('md.group', 'group')
+      .addSelect('MAX(md.name_group)', 'nameGroup')
+      .groupBy('md.group')
+      .getRawMany();
+
+    return groups.map((g) => ({
+      group: g.group,
+      nameGroup: g.nameGroup || null,
+    }));
+  }
+
   async getMasterDataByGroup(group: string) {
     const masterData = await this.masterDataRepo.find({
       where: { group },

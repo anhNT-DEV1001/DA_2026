@@ -4,24 +4,36 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
-import { RoleService } from '../services/index.js';
-import { RoleDto, RoleRequest } from '../dtos/index.js';
+import { RolePermissionService, RoleService } from '../services/index.js';
+import {
+  AssignRolePermissionDto,
+  RoleDto,
+  RoleRequest,
+  UpdateRolePermissionsDto,
+} from '../dtos/index.js';
 import {
   ApiCookieAuth,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtAccessGuard } from '../../auth/guards/index.js';
 
 @ApiTags('Roles')
 @ApiCookieAuth('access-token-cookie')
 @Controller('roles')
 export class RoleController {
-  constructor(private readonly roleService: RoleService) {}
+  constructor(
+    private readonly roleService: RoleService,
+    private readonly rolePermissionService: RolePermissionService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách vai trò' })
@@ -30,15 +42,78 @@ export class RoleController {
     return data;
   }
 
+  @Get(':id/permissions')
+  @ApiOperation({ summary: 'Lấy danh sách ID các quyền của vai trò' })
+  @ApiParam({ name: 'id', example: 1, type: Number })
+  async getRolePermissions(@Param('id', ParseIntPipe) id: number) {
+    return this.rolePermissionService.getPermissionsByRoleId(id);
+  }
+
+  @Post(':id/permissions/assign')
+  @UseGuards(JwtAccessGuard)
+  @ApiOperation({ summary: 'Gán 1 quyền cho vai trò' })
+  @ApiParam({ name: 'id', example: 1, type: Number })
+  async assignPermissionToRole(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AssignRolePermissionDto,
+  ) {
+    return this.rolePermissionService.addPermissionToRole(id, dto.permissionId);
+  }
+
+  @Post(':id/permissions/revoke')
+  @UseGuards(JwtAccessGuard)
+  @ApiOperation({ summary: 'Thu hồi 1 quyền khỏi vai trò' })
+  @ApiParam({ name: 'id', example: 1, type: Number })
+  async revokePermissionFromRole(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AssignRolePermissionDto,
+  ) {
+    return this.rolePermissionService.removePermissionFromRole(
+      id,
+      dto.permissionId,
+    );
+  }
+
+  @Post(':id/permissions/toggle')
+  @UseGuards(JwtAccessGuard)
+  @ApiOperation({ summary: 'Chuyển đổi (Toggle) 1 quyền cho vai trò' })
+  @ApiParam({ name: 'id', example: 1, type: Number })
+  async togglePermissionForRole(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AssignRolePermissionDto,
+  ) {
+    return this.rolePermissionService.togglePermissionForRole(
+      id,
+      dto.permissionId,
+    );
+  }
+
+  @Put(':id/permissions')
+  @UseGuards(JwtAccessGuard)
+  @ApiOperation({
+    summary: 'Cập nhật đồng bộ toàn bộ danh sách quyền cho vai trò',
+  })
+  @ApiParam({ name: 'id', example: 1, type: Number })
+  async updateRolePermissions(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateRolePermissionsDto,
+  ) {
+    return this.rolePermissionService.updateRolePermissions(
+      id,
+      dto.permissionIds,
+    );
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Lấy thông tin vai trò' })
   @ApiParam({ name: 'id', example: 1, type: Number })
-  async getByIdController(@Param('id') id: number) {
+  async getByIdController(@Param('id', ParseIntPipe) id: number) {
     const response = await this.roleService.getById(id);
     return response;
   }
 
   @Post()
+  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Tạo vai trò' })
   async createRole(@Body() dto: RoleDto) {
     const response = await this.roleService.saveRole(dto);
@@ -46,17 +121,22 @@ export class RoleController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Cập nhật vai trò' })
   @ApiParam({ name: 'id', example: 1, type: Number })
-  async updateRoleController(@Param('id') id: number, @Body() dto: RoleDto) {
+  async updateRoleController(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RoleDto,
+  ) {
     const response = await this.roleService.saveRole(dto, id);
     return response;
   }
 
   @Delete(':id')
+  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Xóa vai trò' })
   @ApiParam({ name: 'id', example: 1, type: Number })
-  async removeRoleController(@Param('id') id: number) {
+  async removeRoleController(@Param('id', ParseIntPipe) id: number) {
     const response = await this.roleService.removeRole(id);
     return response;
   }

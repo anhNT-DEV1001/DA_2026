@@ -5,9 +5,10 @@ import { DataTable, type ColumnDef } from "@/components/common/data-table";
 import { Modal } from "@/components/common/modal";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { useRouter } from "next/navigation";
 import { useRole, useRoleList } from "../hooks";
 import type { RoleItem, RoleQueryParams } from "../types";
-import { Shield, Pencil, Trash2, Calendar } from "lucide-react";
+import { Shield, Pencil, Trash2, Calendar, ShieldCheck } from "lucide-react";
 
 export interface RoleTableProps {
   data?: RoleItem[];
@@ -51,6 +52,8 @@ export function RoleTable({
   onDelete,
   queryParams,
 }: RoleTableProps) {
+  const router = useRouter();
+
   // Quản lý internal pagination nếu parent component không truyền vào
   const [internalPage, setInternalPage] = React.useState(1);
   const [internalPageSize, setInternalPageSize] = React.useState(10);
@@ -201,6 +204,20 @@ export function RoleTable({
         width: 100,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="size-7 hover:bg-primary/10 text-muted-foreground hover:text-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(
+                  `/roles/permissions?roleId=${row.id}&roleName=${encodeURIComponent(row.name)}`,
+                );
+              }}
+              title="Phân quyền thao tác"
+            >
+              <ShieldCheck className="size-3.5" />
+            </Button>
             {onEdit && (
               <Button
                 variant="ghost"

@@ -40,6 +40,15 @@ export class CreateMasterDataDto {
   name?: string;
 
   @ApiPropertyOptional({
+    example: 'Giới tính',
+    description: 'Tên hiển thị của nhóm danh mục',
+  })
+  @IsOptional()
+  @IsString({ message: 'Tên nhóm phải là chuỗi ký tự.' })
+  @MaxLength(255, { message: 'Tên nhóm không được vượt quá 255 ký tự.' })
+  nameGroup?: string;
+
+  @ApiPropertyOptional({
     example: 'Giới tính Nam',
     description: 'Mô tả chi tiết',
   })
@@ -70,6 +79,14 @@ export class FilterMasterDataDto {
   @IsOptional()
   @IsString()
   group?: string;
+
+  @ApiPropertyOptional({
+    example: 'Giới tính',
+    description: 'Lọc theo tên nhóm (nameGroup)',
+  })
+  @IsOptional()
+  @IsString()
+  nameGroup?: string;
 
   @ApiPropertyOptional({
     example: 'MALE',

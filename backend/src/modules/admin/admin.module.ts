@@ -10,12 +10,15 @@ import {
 import {
   MasterDataController,
   MenuController,
+  PermissionController,
   RoleController,
 } from './controllers/index.js';
 import {
   AuthorizeService,
   MasterDataService,
   MenuService,
+  PermissionService,
+  RolePermissionService,
   RoleService,
 } from './services/index.js';
 
@@ -34,7 +37,12 @@ import { JwtAccessGuard } from '../auth/guards/index.js';
     ]),
     UsersModule,
   ],
-  controllers: [RoleController, MenuController, MasterDataController],
+  controllers: [
+    RoleController,
+    MenuController,
+    MasterDataController,
+    PermissionController,
+  ],
   providers: [
     RoleService,
     MenuService,
@@ -42,6 +50,8 @@ import { JwtAccessGuard } from '../auth/guards/index.js';
     AuthorizeService,
     PermissionGuard,
     JwtAccessGuard,
+    PermissionService,
+    RolePermissionService,
   ],
   exports: [
     RoleService,
@@ -49,6 +59,8 @@ import { JwtAccessGuard } from '../auth/guards/index.js';
     MasterDataService,
     AuthorizeService,
     PermissionGuard,
+    PermissionService,
+    RolePermissionService,
   ],
 })
 export class AdminModule {}

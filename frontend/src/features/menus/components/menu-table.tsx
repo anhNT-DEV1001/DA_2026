@@ -8,6 +8,7 @@ import { MenuIcon } from "./menu-icon";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/common/modal";
 import { toast } from "@/components/ui/toast";
+import { MenuPermissionButton } from "./menu-permission-detail";
 import {
   Pencil,
   Trash2,
@@ -233,6 +234,7 @@ export function MenuTable({
         width: 100,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
+            <MenuPermissionButton menu={row} />
             {onEdit && (
               <Button
                 variant="ghost"

@@ -1,3 +1,5 @@
+import type { PermissionItem } from "./menu-permission.type";
+
 export interface MenuItem {
   id: number;
   name: string;
@@ -9,6 +11,7 @@ export interface MenuItem {
   isSideBarDisplay: boolean;
   isActive: boolean;
   children?: MenuItem[];
+  permissions?: PermissionItem[];
   createdAt?: string;
   updatedAt?: string;
 }

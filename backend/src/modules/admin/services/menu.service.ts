@@ -23,14 +23,32 @@ export class MenuService {
   ) {}
 
   async getSidebarMenus(): Promise<Menu[]> {
-    const menus = await this.menuRepository.find({
-      where: { isActive: true, isSideBarDisplay: true, parentId: IsNull() },
-      relations: {
-        children: true,
-      },
+    const allMenus = await this.menuRepository.find({
       order: { displayOrder: 'ASC' },
     });
-    return menus;
+
+    // Chỉ lấy các menu đang active và cho phép hiển thị sidebar (mặc định là true nếu null)
+    const validMenus = allMenus.filter(
+      (m) => m.isActive !== false && m.isSideBarDisplay !== false,
+    );
+
+    const menuMap = new Map<number, Menu>();
+    validMenus.forEach((menu) => {
+      menu.children = [];
+      menuMap.set(Number(menu.id), menu);
+    });
+
+    const rootMenus: Menu[] = [];
+    validMenus.forEach((menu) => {
+      const pId = menu.parentId ? Number(menu.parentId) : null;
+      if (pId && menuMap.has(pId)) {
+        menuMap.get(pId)!.children.push(menu);
+      } else if (!pId) {
+        rootMenus.push(menu);
+      }
+    });
+
+    return rootMenus;
   }
 
   async getListMenus(query: MenuRequest): Promise<PageResponse<Menu> | Menu[]> {

@@ -11,6 +11,8 @@ export const ROLE_QUERY_KEYS = {
     [...ROLE_QUERY_KEYS.lists(), params] as const,
   details: () => [...ROLE_QUERY_KEYS.all, "detail"] as const,
   detail: (id: number) => [...ROLE_QUERY_KEYS.details(), id] as const,
+  permissions: (roleId: number) =>
+    [...ROLE_QUERY_KEYS.all, "permissions", roleId] as const,
 };
 
 export function useRoleList(params?: RoleQueryParams) {
@@ -18,6 +20,48 @@ export function useRoleList(params?: RoleQueryParams) {
     queryKey: ROLE_QUERY_KEYS.list(params),
     queryFn: () => roleService.getListRoles(params),
   });
+}
+
+export function useRolePermissions(roleId?: number) {
+  const queryClient = useQueryClient();
+
+  const permissionsQuery = useQuery({
+    queryKey: ROLE_QUERY_KEYS.permissions(roleId!),
+    queryFn: () => roleService.getRolePermissions(roleId!),
+    enabled: typeof roleId === "number" && roleId > 0,
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (permissionId: number) =>
+      roleService.toggleRolePermission(roleId!, permissionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ROLE_QUERY_KEYS.permissions(roleId!),
+      });
+    },
+  });
+
+  const updatePermissionsMutation = useMutation({
+    mutationFn: (permissionIds: number[]) =>
+      roleService.updateRolePermissions(roleId!, permissionIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ROLE_QUERY_KEYS.permissions(roleId!),
+      });
+    },
+  });
+
+  return {
+    assignedPermissionIds: permissionsQuery.data ?? [],
+    isLoadingRolePermissions: permissionsQuery.isLoading,
+    refetchRolePermissions: permissionsQuery.refetch,
+
+    togglePermission: toggleMutation.mutateAsync,
+    isTogglingPermission: toggleMutation.isPending,
+
+    updateRolePermissions: updatePermissionsMutation.mutateAsync,
+    isUpdatingRolePermissions: updatePermissionsMutation.isPending,
+  };
 }
 
 export function useRole(id?: number) {

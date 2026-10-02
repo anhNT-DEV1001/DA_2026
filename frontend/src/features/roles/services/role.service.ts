@@ -34,4 +34,36 @@ export const roleService = {
   deleteRole: async (id: number): Promise<RoleItem> => {
     return apiClient.delete<unknown, RoleItem>(`/roles/${id}`);
   },
+
+  /**
+   * Lấy danh sách ID các permission được gán cho roleId
+   */
+  getRolePermissions: async (roleId: number): Promise<number[]> => {
+    return apiClient.get<unknown, number[]>(`/roles/${roleId}/permissions`);
+  },
+
+  /**
+   * Toggle 1 quyền cho roleId
+   */
+  toggleRolePermission: async (
+    roleId: number,
+    permissionId: number,
+  ): Promise<{ assigned: boolean; roleId: number; permissionId: number }> => {
+    return apiClient.post<
+      unknown,
+      { assigned: boolean; roleId: number; permissionId: number }
+    >(`/roles/${roleId}/permissions/toggle`, { permissionId });
+  },
+
+  /**
+   * Cập nhật đồng bộ danh sách permissionIds cho roleId
+   */
+  updateRolePermissions: async (
+    roleId: number,
+    permissionIds: number[],
+  ): Promise<number[]> => {
+    return apiClient.put<unknown, number[]>(`/roles/${roleId}/permissions`, {
+      permissionIds,
+    });
+  },
 };
