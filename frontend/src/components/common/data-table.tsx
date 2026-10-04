@@ -122,6 +122,14 @@ export function DataTablePagination({
   showTotalInfo = true,
   disabled = false,
 }: DataTablePaginationProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const effectiveDisabled = mounted ? disabled : false;
+
   const totalPages =
     pageCount ??
     (typeof total === "number" ? Math.max(1, Math.ceil(total / pageSize)) : 1);
@@ -133,8 +141,8 @@ export function DataTablePagination({
       ? Math.min(page * pageSize, total)
       : page * pageSize;
 
-  const canPrev = page > 1 && !disabled;
-  const canNext = page < totalPages && !disabled;
+  const canPrev = page > 1 && !effectiveDisabled;
+  const canNext = page < totalPages && !effectiveDisabled;
 
   // Tính toán dãy trang hiển thị kèm dấu ba chấm
   const pages = React.useMemo(() => {
@@ -198,7 +206,7 @@ export function DataTablePagination({
               onValueChange={(val) => {
                 if (val) onPageSizeChange(Number(val));
               }}
-              disabled={disabled}
+              disabled={effectiveDisabled}
             >
               <SelectTrigger
                 size="sm"
@@ -270,7 +278,7 @@ export function DataTablePagination({
                     : "hover:bg-muted text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => onPageChange(item)}
-                disabled={disabled}
+                disabled={effectiveDisabled}
                 aria-current={isCurrent ? "page" : undefined}
               >
                 {item}

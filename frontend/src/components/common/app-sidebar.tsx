@@ -144,13 +144,24 @@ function SidebarTreeNode({
         c.route && (pathname === c.route || pathname.startsWith(`${c.route}/`)),
     );
 
-  // Khi CÒN MENU CON: Chỉ toggle mở rộng để xem menu con, KHÔNG navigate
+  const hasValidRoute = Boolean(item.route && item.route !== "#");
+
+  // Khi CÒN MENU CON:
+  // - Nếu có route hợp lệ: Click phần chữ/icon -> Navigate tới route; Click nút mũi tên -> Toggle mở/đóng menu con
+  // - Nếu không có route hợp lệ: Click vào menu -> Toggle mở/đóng menu con
   if (hasChildren) {
     if (depth > 0) {
       return (
         <SidebarMenuSubItem className="group/subitem">
           <SidebarMenuSubButton
-            onClick={() => toggleExpand(item.id)}
+            render={hasValidRoute ? <Link href={item.route!} /> : undefined}
+            onClick={() => {
+              if (hasValidRoute) {
+                onClose?.();
+              } else {
+                toggleExpand(item.id);
+              }
+            }}
             isActive={isActive || isChildActive}
             className={cn(
               "w-full justify-between cursor-pointer px-2.5 py-1.5 text-xs font-normal",
@@ -192,12 +203,24 @@ function SidebarTreeNode({
                   <Trash2 className="size-3" />
                 </span>
               )}
-              <ChevronRight
-                className={cn(
-                  "size-3.5 shrink-0 text-muted-foreground transition-transform duration-200",
-                  isExpanded && "rotate-90",
-                )}
-              />
+              <span
+                role="button"
+                tabIndex={0}
+                title={isExpanded ? "Thu gọn" : "Mở rộng"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  toggleExpand(item.id);
+                }}
+                className="p-0.5 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <ChevronRight
+                  className={cn(
+                    "size-3.5 shrink-0 transition-transform duration-200",
+                    isExpanded && "rotate-90",
+                  )}
+                />
+              </span>
             </div>
           </SidebarMenuSubButton>
 
@@ -225,7 +248,14 @@ function SidebarTreeNode({
     return (
       <SidebarMenuItem className="group/item">
         <SidebarMenuButton
-          onClick={() => toggleExpand(item.id)}
+          render={hasValidRoute ? <Link href={item.route!} /> : undefined}
+          onClick={() => {
+            if (hasValidRoute) {
+              onClose?.();
+            } else {
+              toggleExpand(item.id);
+            }
+          }}
           isActive={isActive || isChildActive}
           className={cn(
             "w-full justify-between cursor-pointer px-3 py-2 text-sm",
@@ -267,12 +297,24 @@ function SidebarTreeNode({
                 <Trash2 className="size-3.5" />
               </span>
             )}
-            <ChevronRight
-              className={cn(
-                "size-3.5 shrink-0 text-muted-foreground transition-transform duration-200",
-                isExpanded && "rotate-90",
-              )}
-            />
+            <span
+              role="button"
+              tabIndex={0}
+              title={isExpanded ? "Thu gọn" : "Mở rộng"}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                toggleExpand(item.id);
+              }}
+              className="p-0.5 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <ChevronRight
+                className={cn(
+                  "size-3.5 shrink-0 transition-transform duration-200",
+                  isExpanded && "rotate-90",
+                )}
+              />
+            </span>
           </div>
         </SidebarMenuButton>
 
