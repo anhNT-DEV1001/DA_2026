@@ -9,7 +9,6 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { RolePermissionService, RoleService } from '../services/index.js';
 import {
@@ -24,7 +23,6 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAccessGuard } from '../../auth/guards/index.js';
 
 @ApiTags('Roles')
 @ApiCookieAuth('access-token-cookie')
@@ -50,7 +48,6 @@ export class RoleController {
   }
 
   @Post(':id/permissions/assign')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Gán 1 quyền cho vai trò' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async assignPermissionToRole(
@@ -61,7 +58,6 @@ export class RoleController {
   }
 
   @Post(':id/permissions/revoke')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Thu hồi 1 quyền khỏi vai trò' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async revokePermissionFromRole(
@@ -75,7 +71,6 @@ export class RoleController {
   }
 
   @Post(':id/permissions/toggle')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Chuyển đổi (Toggle) 1 quyền cho vai trò' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async togglePermissionForRole(
@@ -89,7 +84,6 @@ export class RoleController {
   }
 
   @Put(':id/permissions')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({
     summary: 'Cập nhật đồng bộ toàn bộ danh sách quyền cho vai trò',
   })
@@ -113,7 +107,6 @@ export class RoleController {
   }
 
   @Post()
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Tạo vai trò' })
   async createRole(@Body() dto: RoleDto) {
     const response = await this.roleService.saveRole(dto);
@@ -121,7 +114,6 @@ export class RoleController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Cập nhật vai trò' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async updateRoleController(
@@ -133,7 +125,6 @@ export class RoleController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Xóa vai trò' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async removeRoleController(@Param('id', ParseIntPipe) id: number) {

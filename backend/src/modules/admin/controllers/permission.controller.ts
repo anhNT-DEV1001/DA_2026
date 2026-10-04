@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
@@ -24,7 +23,6 @@ import {
   UpdatePermissionDto,
 } from '../dtos/index.js';
 import { PermissionService } from '../services/index.js';
-import { JwtAccessGuard } from '../../auth/guards/index.js';
 
 @ApiTags('Permissions')
 @ApiCookieAuth('access-token-cookie')
@@ -47,7 +45,8 @@ export class PermissionController {
 
   @Get('matrix')
   @ApiOperation({
-    summary: 'Lấy ma trận cây Menu và các Permission tương ứng (dành cho phân quyền)',
+    summary:
+      'Lấy ma trận cây Menu và các Permission tương ứng (dành cho phân quyền)',
   })
   async getMenuPermissionMatrix() {
     return this.permissionService.getMenuPermissionMatrix();
@@ -61,7 +60,6 @@ export class PermissionController {
   }
 
   @Post()
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Tạo thao tác (Permission) mới' })
   async createPermission(
     @Body() dto: CreatePermissionDto,
@@ -71,7 +69,6 @@ export class PermissionController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Cập nhật thông tin thao tác (Permission)' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async updatePermission(
@@ -83,7 +80,6 @@ export class PermissionController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Xóa thao tác (Permission)' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async removePermission(

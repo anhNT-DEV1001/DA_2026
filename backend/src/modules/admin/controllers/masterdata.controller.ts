@@ -7,7 +7,6 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
@@ -19,7 +18,6 @@ import { CurrentUser } from '../../../common/decorators/index.js';
 import { UserResponse } from '../../users/dtos/index.js';
 import { MasterDataDto } from '../dtos/index.js';
 import { MasterDataService } from '../services/index.js';
-import { JwtAccessGuard } from '../../auth/guards/index.js';
 
 @ApiTags('Master Data')
 @ApiCookieAuth('access-token-cookie')
@@ -41,7 +39,6 @@ export class MasterDataController {
   }
 
   @Post()
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Tạo master data' })
   async createMasterData(
     @Body() dto: MasterDataDto,
@@ -51,7 +48,6 @@ export class MasterDataController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Cập nhật master data' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async updateMasterData(
@@ -63,7 +59,6 @@ export class MasterDataController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Xóa master data' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async removeMasterData(

@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
@@ -20,7 +19,6 @@ import { CurrentUser } from '../../../common/decorators/index.js';
 import { UserResponse } from '../../users/dtos/index.js';
 import { MenuDto, MenuRequest } from '../dtos/index.js';
 import { MenuService } from '../services/index.js';
-import { JwtAccessGuard } from '../../auth/guards/index.js';
 
 @ApiTags('Menus')
 @ApiCookieAuth('access-token-cookie')
@@ -48,7 +46,6 @@ export class MenuController {
   }
 
   @Post()
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Tạo menu' })
   async createMenu(
     @Body() dto: MenuDto,
@@ -58,7 +55,6 @@ export class MenuController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Cập nhật menu' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async updateMenu(
@@ -70,7 +66,6 @@ export class MenuController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Xóa menu' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async removeMenu(

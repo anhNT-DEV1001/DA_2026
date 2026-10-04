@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
@@ -24,7 +23,6 @@ import {
   WorkspaceRequest,
 } from './dtos/index.js';
 import { WorkspacesService } from './workspaces.service.js';
-import { JwtAccessGuard } from '../auth/guards/index.js';
 
 @ApiTags('Workspaces')
 @ApiCookieAuth('access-token-cookie')
@@ -33,7 +31,6 @@ export class WorkspacesController {
   constructor(private readonly workspacesService: WorkspacesService) {}
 
   @Get('my')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Lấy danh sách workspace của người dùng hiện tại' })
   async getCurrentUserWorkspaces(@CurrentUser('user') user: UserResponse) {
     return this.workspacesService.getCurrentUserWorkspaces(user);
@@ -71,7 +68,6 @@ export class WorkspacesController {
   }
 
   @Post()
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Tạo mới một workspace' })
   async create(
     @Body() dto: CreateWorkspaceDto,
@@ -81,7 +77,6 @@ export class WorkspacesController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Cập nhật workspace' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async update(
@@ -93,7 +88,6 @@ export class WorkspacesController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAccessGuard)
   @ApiOperation({ summary: 'Xóa mềm workspace' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async remove(

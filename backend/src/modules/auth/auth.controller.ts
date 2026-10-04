@@ -31,7 +31,7 @@ import { createMulterOptions } from '../../common/utils/multer.util.js';
 import { AuthService } from './auth.service.js';
 import { LoginDto, RegisterDto } from './dtos/index.js';
 import type { AuthUser, RefreshAuthUser } from './dtos/index.js';
-import { JwtAccessGuard, JwtRefreshGuard } from './guards/index.js';
+import { JwtRefreshGuard } from './guards/index.js';
 import { clearAuthCookies, setAuthCookies } from '../../common/utils/index.js';
 
 const avatarUploadOptions = createMulterOptions({
@@ -41,7 +41,6 @@ const avatarUploadOptions = createMulterOptions({
 
 @ApiTags('Auth')
 @ApiExtraModels(RegisterDto)
-@UseGuards(JwtAccessGuard)
 @Controller('auth')
 export class AuthController {
   constructor(
