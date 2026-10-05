@@ -19,7 +19,13 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
+    "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "typeorm": "bun run ./node_modules/typeorm/cli.js -d src/config/typeorm.config.ts",
+    "migration:generate": "bun run ./node_modules/typeorm/cli.js migration:generate -d src/config/typeorm.config.ts",
+    "migration:run": "bun run ./node_modules/typeorm/cli.js migration:run -d src/config/typeorm.config.ts",
+    "migration:revert": "bun run ./node_modules/typeorm/cli.js migration:revert -d src/config/typeorm.config.ts",
+    "migration:show": "bun run ./node_modules/typeorm/cli.js migration:show -d src/config/typeorm.config.ts",
+    "migration:create": "bun run ./node_modules/typeorm/cli.js migration:create"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

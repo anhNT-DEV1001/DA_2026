@@ -2,7 +2,7 @@ import { SoftDeleteEntity } from '../../../infrastructure/database/entites/index
 import { Column, Entity, OneToMany, type Relation } from 'typeorm';
 import { UserSession } from '../../auth/entities/user-session.entity.js';
 import { UserRole } from './user-role.entity.js';
-import { UserPermission } from './user-permission.js';
+import { UserPermission } from './user-permission.entity.js';
 
 @Entity('users')
 export class User extends SoftDeleteEntity {

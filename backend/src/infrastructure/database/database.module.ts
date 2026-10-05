@@ -1,21 +1,21 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { dataSourceOptions } from '../../config/typeorm.config.js';
 
+/**
+ * Lệnh chạy database
+ * genertate: bun run migration:generate src/infrastructure/database/migrations/CreateInitTables
+ * migration: bun run migration:run
+ * revert: bun run migration:revert
+ * create: bun run migration:create src/infrastructure/database/migrations/CustomSQL
+ * show: bun run migration:show
+ */
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get<string>('DB_HOST'),
-        port: config.get<number>('DB_PORT'),
-        username: config.get<string>('DB_USER'),
-        password: config.get<string>('DB_PASSWORD'),
-        database: config.get<string>('DB_NAME'),
-        autoLoadEntities: true,
-        synchronize: true,
+      useFactory: () => ({
+        ...dataSourceOptions,
+        autoLoadEntities: true, // Tiện ích của NestJS TypeORM
       }),
     }),
   ],

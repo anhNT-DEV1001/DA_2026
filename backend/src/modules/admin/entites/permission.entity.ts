@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Menu } from './menu.entity.js';
 import { RolePermission } from './role-permission.entity.js';
-import { UserPermission } from '../../users/entities/user-permission.js';
+import { UserPermission } from '../../users/entities/user-permission.entity.js';
 
 @Entity('permissions')
 export class Permission extends BaseEntity {
