@@ -5,18 +5,18 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, ILike, Not, Repository } from 'typeorm';
-import { Workspace, WorkspaceMember } from './entities/index.js';
-import { UserResponse } from '../users/dtos/index.js';
+import { Workspace, WorkspaceMember } from '../entities/index.js';
+import { UserResponse } from '../../users/dtos/index.js';
 import {
   CreateWorkspaceDto,
   UpdateWorkspaceDto,
   WorkspaceRequest,
-} from './dtos/index.js';
+} from '../dtos/index.js';
 import {
   PageMetadataResponse,
   PageResponse,
-} from '../../common/responses/index.js';
-import { slugify } from './utils/slug.util.js';
+} from '../../../common/responses/index.js';
+import { slugify } from '../utils/slug.util.js';
 
 @Injectable()
 export class WorkspacesService {
@@ -38,7 +38,9 @@ export class WorkspacesService {
       .createQueryBuilder('ws')
       .leftJoinAndSelect('ws.owner', 'owner')
       .leftJoinAndSelect('ws.members', 'members')
-      .orderBy('ws.createdAt', 'DESC');
+      .orderBy('ws.isStar', 'DESC')
+      .addOrderBy('ws.displayOrder', 'ASC')
+      .addOrderBy('ws.createdAt', 'DESC');
 
     // Lọc theo chế độ public / private
     if (query.mode) {
@@ -48,6 +50,11 @@ export class WorkspacesService {
     // Lọc theo ownerId
     if (query.ownerId) {
       qb.andWhere('ws.ownerId = :ownerId', { ownerId: query.ownerId });
+    }
+
+    // Lọc theo isStar
+    if (query.isStar !== undefined) {
+      qb.andWhere('ws.isStar = :isStar', { isStar: query.isStar });
     }
 
     // Tìm kiếm theo từ khóa (name, slug, description)
@@ -90,7 +97,9 @@ export class WorkspacesService {
       .where('ws.ownerId = :userId OR userMember.userId = :userId', {
         userId: user.id,
       })
-      .orderBy('ws.createdAt', 'DESC')
+      .orderBy('ws.isStar', 'DESC')
+      .addOrderBy('ws.displayOrder', 'ASC')
+      .addOrderBy('ws.createdAt', 'DESC')
       .getMany();
 
     return workspaces;
@@ -137,7 +146,9 @@ export class WorkspacesService {
     });
 
     if (!ws) {
-      throw new NotFoundException(`Không tìm thấy workspace với slug "${slug}"`);
+      throw new NotFoundException(
+        `Không tìm thấy workspace với slug "${slug}"`,
+      );
     }
 
     return ws;
@@ -184,6 +195,8 @@ export class WorkspacesService {
       slug,
       ownerId,
       mode: dto.mode ?? 'private',
+      displayOrder: dto.displayOrder ?? 1,
+      isStar: dto.isStar ?? false,
       createdBy: user?.id ?? null,
       updatedBy: user?.id ?? null,
     });
@@ -244,6 +257,14 @@ export class WorkspacesService {
 
     if (dto.ownerId !== undefined) {
       workspace.ownerId = dto.ownerId;
+    }
+
+    if (dto.displayOrder !== undefined) {
+      workspace.displayOrder = dto.displayOrder;
+    }
+
+    if (dto.isStar !== undefined) {
+      workspace.isStar = dto.isStar;
     }
 
     workspace.updatedBy = user?.id ?? null;

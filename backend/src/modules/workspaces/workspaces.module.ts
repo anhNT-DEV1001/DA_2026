@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { WorkspacesService } from './workspaces.service.js';
+import { WorkspacesService } from './services/workspaces.service.js';
 import { WorkspacesController } from './workspaces.controller.js';
 import { Workspace, WorkspaceMember } from './entities/index.js';
 

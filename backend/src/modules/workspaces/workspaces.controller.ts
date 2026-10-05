@@ -22,7 +22,7 @@ import {
   UpdateWorkspaceDto,
   WorkspaceRequest,
 } from './dtos/index.js';
-import { WorkspacesService } from './workspaces.service.js';
+import { WorkspacesService } from './services/workspaces.service.js';
 
 @ApiTags('Workspaces')
 @ApiCookieAuth('access-token-cookie')

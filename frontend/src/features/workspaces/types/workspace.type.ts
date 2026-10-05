@@ -26,6 +26,8 @@ export interface WorkspaceItem {
   slug: string;
   ownerId: number;
   mode: "public" | "private";
+  displayOrder?: number;
+  isStar?: boolean;
   owner?: UserItem;
   members?: WorkspaceMemberItem[];
   createdAt?: string | null;
@@ -44,6 +46,8 @@ export interface CreateWorkspaceDto {
   slug?: string;
   mode?: "public" | "private";
   ownerId?: number;
+  displayOrder?: number;
+  isStar?: boolean;
 }
 
 export interface UpdateWorkspaceDto {
@@ -52,12 +56,15 @@ export interface UpdateWorkspaceDto {
   slug?: string;
   mode?: "public" | "private";
   ownerId?: number;
+  displayOrder?: number;
+  isStar?: boolean;
 }
 
 export interface WorkspaceQueryParams {
   search?: string;
   mode?: "public" | "private";
   ownerId?: number;
+  isStar?: boolean;
   page?: number;
   limit?: number;
 }

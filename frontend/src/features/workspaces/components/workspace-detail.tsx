@@ -5,6 +5,7 @@ import { Modal } from "@/components/common/modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { useWorkspace } from "../hooks";
 import type {
@@ -20,6 +21,7 @@ import {
   Pencil,
   PlusCircle,
   Sparkles,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +38,8 @@ interface FormState {
   slug: string;
   description: string;
   mode: "public" | "private";
+  displayOrder: number;
+  isStar: boolean;
 }
 
 const initialFormState: FormState = {
@@ -43,6 +47,8 @@ const initialFormState: FormState = {
   slug: "",
   description: "",
   mode: "private",
+  displayOrder: 1,
+  isStar: false,
 };
 
 /**
@@ -85,6 +91,8 @@ export function WorkspaceDetailModal({
         slug: workspace.slug || "",
         description: workspace.description || "",
         mode: workspace.mode || "private",
+        displayOrder: workspace.displayOrder ?? 1,
+        isStar: Boolean(workspace.isStar),
       });
       setIsSlugManual(true);
     } else {
@@ -147,6 +155,13 @@ export function WorkspaceDetailModal({
       newErrors.description = "Mô tả không được vượt quá 255 ký tự.";
     }
 
+    if (
+      form.displayOrder !== undefined &&
+      (isNaN(form.displayOrder) || form.displayOrder < 0)
+    ) {
+      newErrors.displayOrder = "Thứ tự hiển thị phải là số không âm.";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -162,6 +177,8 @@ export function WorkspaceDetailModal({
           slug: form.slug.trim() || undefined,
           description: form.description.trim() || undefined,
           mode: form.mode,
+          displayOrder: Number(form.displayOrder) || 1,
+          isStar: form.isStar,
         };
 
         const updated = await updateWorkspace({ id: workspace.id, dto });
@@ -180,6 +197,8 @@ export function WorkspaceDetailModal({
           slug: form.slug.trim() || undefined,
           description: form.description.trim() || undefined,
           mode: form.mode,
+          displayOrder: Number(form.displayOrder) || 1,
+          isStar: form.isStar,
         };
 
         const created = await createWorkspace(dto);
@@ -304,6 +323,55 @@ export function WorkspaceDetailModal({
           {errors.description && (
             <p className="text-[11px] text-destructive">{errors.description}</p>
           )}
+        </div>
+
+        {/* Thứ tự hiển thị & Đánh dấu sao (isStar) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {/* Thứ tự hiển thị */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ws-display-order" className="text-xs font-semibold">
+              Thứ tự hiển thị
+            </Label>
+            <Input
+              id="ws-display-order"
+              type="number"
+              min={1}
+              value={form.displayOrder}
+              onChange={(e) =>
+                handleChange("displayOrder", parseInt(e.target.value, 10) || 1)
+              }
+              placeholder="1"
+            />
+            {errors.displayOrder && (
+              <p className="text-[11px] text-destructive">
+                {errors.displayOrder}
+              </p>
+            )}
+          </div>
+
+          {/* Đánh dấu sao (isStar) */}
+          <div className="flex items-center justify-between p-3  mt-auto">
+            <div className="flex items-center gap-2.5">
+              <Star
+                className={cn(
+                  "size-4 transition-colors",
+                  form.isStar
+                    ? "fill-amber-400 text-amber-500"
+                    : "text-muted-foreground",
+                )}
+              />
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold">Yêu thích (Star)</span>
+                {/* <span className="text-[10px] text-muted-foreground">
+                  Ưu tiên hiển thị trên đầu
+                </span> */}
+              </div>
+            </div>
+            <Switch
+              checked={form.isStar}
+              onCheckedChange={(checked) => handleChange("isStar", checked)}
+            />
+          </div>
         </div>
 
         {/* Chế độ hiển thị (Mode: private / public) */}

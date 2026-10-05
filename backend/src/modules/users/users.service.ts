@@ -1,3 +1,5 @@
+import { existsSync, unlinkSync } from 'fs';
+import { resolve } from 'path';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import bcrypt from 'bcrypt';
@@ -24,6 +26,22 @@ export class UsersService {
     @InjectRepository(UserRole)
     private readonly userRoleRepo: Repository<UserRole>,
   ) {}
+
+  private deleteAvatarFile(avatarPath?: string | null): void {
+    if (!avatarPath) return;
+    try {
+      const relativePath = avatarPath.startsWith('/')
+        ? avatarPath.slice(1)
+        : avatarPath;
+      const absolutePath = resolve(process.cwd(), relativePath);
+
+      if (existsSync(absolutePath)) {
+        unlinkSync(absolutePath);
+      }
+    } catch (error) {
+      console.error(`Lỗi khi xóa file avatar (${avatarPath}):`, error);
+    }
+  }
 
   async createUser(dto: CreateUserDto): Promise<UserResponse> {
     return this.userRepo.manager.transaction(async (manager) => {
@@ -67,7 +85,7 @@ export class UsersService {
   }
 
   async updateUser(id: number, dto: UpdateUserDto): Promise<UserResponse> {
-    return this.userRepo.manager.transaction(async (manager) => {
+    const result = await this.userRepo.manager.transaction(async (manager) => {
       const userRepo = manager.getRepository(User);
       const userRoleRepo = manager.getRepository(UserRole);
       const roleRepo = manager.getRepository(Role);
@@ -94,6 +112,7 @@ export class UsersService {
           ? undefined
           : await this.validateRoleIds(roleRepo, roleIds);
 
+      const oldAvatar = existUser.avatar;
       const user = userRepo.merge(existUser, userData);
       await userRepo.save(user);
 
@@ -106,15 +125,35 @@ export class UsersService {
           await userRoleRepo.save(userRoles);
         }
       }
-      return new UserResponse().mapToResponse(user);
+      return {
+        userResponse: new UserResponse().mapToResponse(user),
+        oldAvatar,
+        newAvatar: dto.avatar,
+      };
     });
+
+    if (
+      result.newAvatar !== undefined &&
+      result.oldAvatar &&
+      result.oldAvatar !== result.newAvatar
+    ) {
+      this.deleteAvatarFile(result.oldAvatar);
+    }
+
+    return result.userResponse;
   }
 
   async removeUser(id: number): Promise<UserResponse> {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new BadRequestException('Người dùng không tồn tại !');
 
+    const oldAvatar = user.avatar;
     await this.userRepo.softRemove(user);
+
+    if (oldAvatar) {
+      this.deleteAvatarFile(oldAvatar);
+    }
+
     return new UserResponse().mapToResponse(user);
   }
 

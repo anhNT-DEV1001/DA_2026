@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -8,7 +9,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { PaginanteRequest } from '../../../common/requests/index.js';
 
 export class CreateWorkspaceDto {
@@ -61,6 +62,25 @@ export class CreateWorkspaceDto {
   @IsInt({ message: 'Mã chủ sở hữu phải là số nguyên.' })
   @Min(1, { message: 'Mã chủ sở hữu phải lớn hơn 0.' })
   ownerId?: number;
+
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Thứ tự hiển thị',
+    default: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Thứ tự hiển thị phải là số nguyên.' })
+  displayOrder?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Trạng thái đánh dấu sao (yêu thích)',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'Trạng thái isStar phải là boolean.' })
+  isStar?: boolean;
 }
 
 export class UpdateWorkspaceDto extends PartialType(CreateWorkspaceDto) {}
@@ -91,4 +111,13 @@ export class WorkspaceRequest extends PaginanteRequest {
   @Type(() => Number)
   @IsInt()
   ownerId?: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Lọc theo trạng thái đánh dấu sao (isStar)',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  isStar?: boolean;
 }

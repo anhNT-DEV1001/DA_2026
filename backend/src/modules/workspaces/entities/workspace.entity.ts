@@ -27,6 +27,12 @@ export class Workspace extends SoftDeleteEntity {
   @Column({ type: 'enum', enum: ['public', 'private'], default: 'private' })
   mode: 'public' | 'private';
 
+  @Column({ name: 'display_order', default: 1, nullable: true })
+  displayOrder: number;
+
+  @Column({ name: 'is_star', default: false })
+  isStar: boolean;
+
   @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'owner_id' })
   owner: Relation<User>;
