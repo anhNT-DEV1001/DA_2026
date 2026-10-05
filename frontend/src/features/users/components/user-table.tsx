@@ -48,6 +48,34 @@ function formatDate(dateStr?: string | null) {
   }
 }
 
+function getDobDetails(dobStr?: string | null) {
+  if (!dobStr) return null;
+  const birthDate = new Date(dobStr);
+  if (isNaN(birthDate.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+
+  if (age < 0) age = 0;
+
+  const day = String(birthDate.getDate()).padStart(2, "0");
+  const month = String(birthDate.getMonth() + 1).padStart(2, "0");
+  const year = birthDate.getFullYear();
+  const formattedDob = `${day}/${month}/${year}`;
+
+  return {
+    age,
+    formattedDob,
+  };
+}
+
 function getInitials(name?: string | null): string {
   if (!name) return "U";
   const parts = name.trim().split(/\s+/);
@@ -190,6 +218,29 @@ export function UserTable({
             </div>
           </div>
         ),
+      },
+      {
+        id: "dob",
+        header: "Ngày sinh",
+        accessorKey: "dob",
+        align: "center",
+        width: 150,
+        cell: ({ row }) => {
+          const dobInfo = getDobDetails(row.dob);
+          if (!dobInfo) {
+            return <span className="text-xs text-muted-foreground">—</span>;
+          }
+          return (
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                {dobInfo.age}
+              </span>
+              <span className="text-xs text-muted-foreground font-medium">
+                {dobInfo.formattedDob}
+              </span>
+            </div>
+          );
+        },
       },
       {
         id: "contact",
