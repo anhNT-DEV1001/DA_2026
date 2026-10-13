@@ -1,23 +1,8 @@
 import type { UserItem } from "../../users/types";
 
-export interface WorkspaceMemberItem {
-  id: number;
-  workspaceId: number;
-  userId: number;
-  roleId: number;
-  status: string;
-  joinedAt?: string | null;
-  user?: UserItem;
-  role?: {
-    id: number;
-    name: string;
-    description?: string | null;
-  };
-  createdAt?: string | null;
-  updatedAt?: string | null;
-  createdBy?: number | null;
-  updatedBy?: number | null;
-}
+import type { WorkspaceMemberItem } from "./workspace-member.type";
+
+export type { WorkspaceMemberItem };
 
 export interface WorkspaceItem {
   id: number;

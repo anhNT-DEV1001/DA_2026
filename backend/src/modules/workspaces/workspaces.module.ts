@@ -1,13 +1,21 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { WorkspacesService } from './services/workspaces.service.js';
+import {
+  WorkspaceMemberService,
+  WorkspacesService,
+} from './services/index.js';
 import { WorkspacesController } from './workspaces.controller.js';
 import { Workspace, WorkspaceMember } from './entities/index.js';
+import { Role } from '../admin/entites/index.js';
+import { UsersModule } from '../users/users.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Workspace, WorkspaceMember])],
-  providers: [WorkspacesService],
+  imports: [
+    UsersModule,
+    TypeOrmModule.forFeature([Workspace, WorkspaceMember, Role]),
+  ],
+  providers: [WorkspacesService, WorkspaceMemberService],
   controllers: [WorkspacesController],
-  exports: [WorkspacesService],
+  exports: [WorkspacesService, WorkspaceMemberService],
 })
 export class WorkspacesModule {}

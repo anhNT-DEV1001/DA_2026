@@ -18,17 +18,30 @@ import {
 import { CurrentUser } from '../../common/decorators/index.js';
 import { UserResponse } from '../users/dtos/index.js';
 import {
+  AddWorkspaceMemberDto,
   CreateWorkspaceDto,
   UpdateWorkspaceDto,
+  UpdateWorkspaceMemberDto,
+  WorkspaceMemberRequest,
   WorkspaceRequest,
 } from './dtos/index.js';
-import { WorkspacesService } from './services/workspaces.service.js';
+import {
+  WorkspaceMemberService,
+  WorkspacesService,
+} from './services/index.js';
 
 @ApiTags('Workspaces')
 @ApiCookieAuth('access-token-cookie')
 @Controller('workspaces')
 export class WorkspacesController {
-  constructor(private readonly workspacesService: WorkspacesService) {}
+  constructor(
+    private readonly workspacesService: WorkspacesService,
+    private readonly workspaceMemberService: WorkspaceMemberService,
+  ) {}
+
+  /* ========================================================================= */
+  /*                             WORKSPACE APIs                                */
+  /* ========================================================================= */
 
   @Get('my')
   @ApiOperation({ summary: 'Lấy danh sách workspace của người dùng hiện tại' })
@@ -95,5 +108,85 @@ export class WorkspacesController {
     @CurrentUser('user') user?: UserResponse,
   ) {
     return this.workspacesService.removeWorkspace(id, user);
+  }
+
+  /* ========================================================================= */
+  /*                          WORKSPACE MEMBERS APIs                           */
+  /* ========================================================================= */
+
+  @Get(':id/members')
+  @ApiOperation({
+    summary:
+      'Lấy danh sách thành viên trong workspace (phân trang, lọc theo vai trò/trạng thái, join role & user)',
+  })
+  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  async getMembers(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: WorkspaceMemberRequest,
+  ) {
+    return this.workspaceMemberService.findAll(id, query);
+  }
+
+  @Get(':id/members/:userId')
+  @ApiOperation({ summary: 'Lấy thông tin chi tiết một thành viên trong workspace' })
+  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  @ApiParam({
+    name: 'userId',
+    example: 1,
+    type: Number,
+    description: 'ID người dùng (thành viên)',
+  })
+  async getMemberDetail(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.workspaceMemberService.findOne(id, userId);
+  }
+
+  @Post(':id/members')
+  @ApiOperation({ summary: 'Thêm thành viên mới vào workspace' })
+  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  async addMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AddWorkspaceMemberDto,
+    @CurrentUser('user') user?: UserResponse,
+  ) {
+    return this.workspaceMemberService.addMember(id, dto, user?.id);
+  }
+
+  @Patch(':id/members/:userId')
+  @ApiOperation({
+    summary: 'Cập nhật vai trò (role) hoặc trạng thái của thành viên trong workspace',
+  })
+  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  @ApiParam({
+    name: 'userId',
+    example: 1,
+    type: Number,
+    description: 'ID người dùng (thành viên)',
+  })
+  async updateMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('userId', ParseIntPipe) userId: number,
+    @Body() dto: UpdateWorkspaceMemberDto,
+    @CurrentUser('user') user?: UserResponse,
+  ) {
+    return this.workspaceMemberService.updateMember(id, userId, dto, user?.id);
+  }
+
+  @Delete(':id/members/:userId')
+  @ApiOperation({ summary: 'Xóa thành viên khỏi workspace' })
+  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  @ApiParam({
+    name: 'userId',
+    example: 1,
+    type: Number,
+    description: 'ID người dùng (thành viên)',
+  })
+  async removeMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.workspaceMemberService.removeMember(id, userId);
   }
 }

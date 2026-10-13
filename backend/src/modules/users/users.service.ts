@@ -263,4 +263,11 @@ export class UsersService {
 
     return uniqueRoleIds;
   }
+
+  async checkExistUser(user_ids: number[]) {
+    const existUsers = await this.userRepo.exists({
+      where: { id: In(user_ids) },
+    });
+    return existUsers;
+  }
 }
