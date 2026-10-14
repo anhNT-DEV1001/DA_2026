@@ -1,0 +1,12 @@
+-- Database Client 9.0.2
+-- Host: 127.0.0.1 Port: 5432 Database: public Schema: public
+-- Dump is still an early version, please use the dumped SQL with caution
+
+DROP TABLE IF EXISTS migrations;
+CREATE TABLE migrations(
+     id SERIAL NOT NULL,
+    timestamp bigint NOT NULL,
+    name varchar NOT NULL ,
+    PRIMARY KEY(id) 
+);
+INSERT INTO migrations(timestamp,name) VALUES(1791907601902,'InitSchema1791907601902');

@@ -1,0 +1,24 @@
+-- Database Client 9.0.2
+-- Host: 127.0.0.1 Port: 5432 Database: public Schema: public
+-- Dump is still an early version, please use the dumped SQL with caution
+
+DROP TABLE IF EXISTS menus;
+CREATE TABLE menus(
+     id SERIAL NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    updated_at timestamp without time zone DEFAULT now(),
+    created_by integer,
+    updated_by integer,
+    name varchar(255) NOT NULL,
+    route varchar(255),
+    icon varchar(255),
+    alias varchar(255) NOT NULL,
+    parent_id integer,
+    "displayOrder" integer NOT NULL DEFAULT 0,
+    "isSideBarDisplay" boolean NOT NULL DEFAULT true,
+    is_active boolean NOT NULL DEFAULT true ,
+    PRIMARY KEY(id) ,
+    CONSTRAINT FK_00ccc1ed4e9fc23bc1246269359 FOREIGN key(parent_id) REFERENCES menus(id) 
+); 
+CREATE UNIQUE INDEX "UQ_130342136d153a8a6b35db00e03" ON public.menus USING btree (alias);
+INSERT INTO menus(created_at,updated_at,created_by,updated_by,name,route,icon,alias,parent_id,"displayOrder","isSideBarDisplay",is_active) VALUES('2026-10-13 16:16:03.093274','2026-10-13 16:16:03.093274',1,1,'Trang chủ','/','Home','HomePage',null,1,true,true),('2026-10-13 16:23:31.682409','2026-10-13 16:23:31.682409',1,1,'Danh sách màn hình','/menus','Menu','ListMenus',2,1,true,true),('2026-10-13 16:24:37.947019','2026-10-13 16:24:37.947019',1,1,'Master Data','/masterdata','Database','MasterData',2,2,true,true),('2026-10-13 16:25:14.410193','2026-10-13 16:25:14.410193',1,1,'Nhóm quyền','/roles','UserKey','RoleGroup',2,3,true,true),('2026-10-13 16:25:58.632775','2026-10-13 16:25:58.632775',1,1,'Người dùng','/users','Users','Users',2,4,true,true),('2026-10-13 16:33:04.772083','2026-10-13 16:33:54.340963',1,1,'Workspaces','/workspaces','FolderKanban','Workspace',1,2,true,true),('2026-10-13 16:19:29.000055','2026-10-13 16:35:09.650399',1,1,'Hệ thống','/system','Settings','System',null,5,true,true),('2026-10-13 16:37:03.936164','2026-10-13 16:37:03.936164',1,1,'Dasboard','dashboard','ChartColumnDecreasing','Dashboard',null,2,true,true),('2026-10-13 16:34:46.886346','2026-10-13 17:04:42.346819',1,1,'Note','/notes','Notebook','Note',1,1,true,true),('2026-10-13 17:06:23.545708','2026-10-13 17:06:23.545708',1,1,'Task','/task','ListChecks','Task',null,3,true,true),('2026-10-13 17:07:47.310511','2026-10-13 17:07:47.310511',1,1,'Hội thoại','/chats','MessagesCircle','Chat',null,4,true,true);

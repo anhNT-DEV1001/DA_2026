@@ -1,0 +1,21 @@
+-- Database Client 9.0.2
+-- Host: 127.0.0.1 Port: 5432 Database: public Schema: public
+-- Dump is still an early version, please use the dumped SQL with caution
+
+DROP TABLE IF EXISTS workspace_members;
+CREATE TABLE workspace_members(
+     id SERIAL NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    updated_at timestamp without time zone DEFAULT now(),
+    created_by integer,
+    updated_by integer,
+    workspace_id integer NOT NULL,
+    user_id integer NOT NULL,
+    role_id integer NOT NULL,
+    status varchar(255) NOT NULL DEFAULT 'active'::character varying,
+    joined_at timestamp without time zone ,
+    PRIMARY KEY(id) ,
+    CONSTRAINT FK_4a7c584ddfe855379598b5e20fd FOREIGN key(workspace_id) REFERENCES workspaces(id),
+    CONSTRAINT FK_4e83431119fa585fc7aa8b817db FOREIGN key(user_id) REFERENCES users(id),
+    CONSTRAINT FK_cd3916b233236ce65c819f8c3f0 FOREIGN key(role_id) REFERENCES roles(id) 
+);

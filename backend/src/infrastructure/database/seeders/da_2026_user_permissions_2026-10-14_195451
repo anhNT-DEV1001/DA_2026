@@ -1,0 +1,18 @@
+-- Database Client 9.0.2
+-- Host: 127.0.0.1 Port: 5432 Database: public Schema: public
+-- Dump is still an early version, please use the dumped SQL with caution
+
+DROP TABLE IF EXISTS user_permissions;
+CREATE TABLE user_permissions(
+     id SERIAL NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    updated_at timestamp without time zone DEFAULT now(),
+    created_by integer,
+    updated_by integer,
+    user_id integer NOT NULL,
+    permission_id integer NOT NULL,
+    revorke_at timestamp without time zone ,
+    PRIMARY KEY(id) ,
+    CONSTRAINT FK_3495bd31f1862d02931e8e8d2e8 FOREIGN key(user_id) REFERENCES users(id),
+    CONSTRAINT FK_8145f5fadacd311693c15e41f10 FOREIGN key(permission_id) REFERENCES permissions(id) 
+);

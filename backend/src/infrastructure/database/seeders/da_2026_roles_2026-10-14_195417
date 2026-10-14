@@ -1,0 +1,17 @@
+-- Database Client 9.0.2
+-- Host: 127.0.0.1 Port: 5432 Database: public Schema: public
+-- Dump is still an early version, please use the dumped SQL with caution
+
+DROP TABLE IF EXISTS roles;
+CREATE TABLE roles(
+     id SERIAL NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    updated_at timestamp without time zone DEFAULT now(),
+    created_by integer,
+    updated_by integer,
+    name varchar(255) NOT NULL,
+    description text ,
+    PRIMARY KEY(id) 
+); 
+CREATE UNIQUE INDEX "UQ_648e3f5447f725579d7d4ffdfb7" ON public.roles USING btree (name);
+INSERT INTO roles(created_at,updated_at,created_by,updated_by,name,description) VALUES('2026-10-13 16:30:46.396131','2026-10-13 16:30:46.396131',null,null,'root','Quản trị hệ thống'),('2026-10-13 16:31:08.04761','2026-10-13 16:31:08.04761',null,null,'user','Người dùng cơ bản');

@@ -1,0 +1,28 @@
+-- Database Client 9.0.2
+-- Host: 127.0.0.1 Port: 5432 Database: public Schema: public
+-- Dump is still an early version, please use the dumped SQL with caution
+
+DROP TABLE IF EXISTS users;
+CREATE TABLE users(
+     id SERIAL NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    updated_at timestamp without time zone DEFAULT now(),
+    created_by integer,
+    updated_by integer,
+    deleted_at timestamp without time zone,
+    deleted_by integer,
+    username varchar(255) NOT NULL,
+    password varchar(100) NOT NULL,
+    full_name varchar(255) NOT NULL,
+    email varchar(255),
+    phone varchar(20),
+    gender varchar(20),
+    avatar varchar(255),
+    address varchar(255),
+    dob date ,
+    PRIMARY KEY(id) 
+); 
+CREATE UNIQUE INDEX "UQ_fe0bb3f6520ee0469504521e710" ON public.users USING btree (username);
+CREATE UNIQUE INDEX "UQ_97672ac88f789774dd47f7c8be3" ON public.users USING btree (email);
+CREATE UNIQUE INDEX "UQ_a000cca60bcf04454e727699490" ON public.users USING btree (phone);
+INSERT INTO users(created_at,updated_at,created_by,updated_by,deleted_at,deleted_by,username,password,full_name,email,phone,gender,avatar,address,dob) VALUES('2026-10-13 16:08:56.1684','2026-10-13 16:08:56.1684',null,null,null,null,'root','$2b$10$ROL.u3M4eW0rh3frJhIV8.MS0Bs28qdkyOJxgj/r7.MFmnpeNcuaO','Nguyễn Tuấn Anh','anhtuannguyen10012004@gmail.com','0888009746','Nam',null,null,'2004-01-10');
