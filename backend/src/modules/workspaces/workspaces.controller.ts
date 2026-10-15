@@ -25,10 +25,7 @@ import {
   WorkspaceMemberRequest,
   WorkspaceRequest,
 } from './dtos/index.js';
-import {
-  WorkspaceMemberService,
-  WorkspacesService,
-} from './services/index.js';
+import { WorkspaceMemberService, WorkspacesService } from './services/index.js';
 
 @ApiTags('Workspaces')
 @ApiCookieAuth('access-token-cookie')
@@ -119,7 +116,12 @@ export class WorkspacesController {
     summary:
       'Lấy danh sách thành viên trong workspace (phân trang, lọc theo vai trò/trạng thái, join role & user)',
   })
-  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
   async getMembers(
     @Param('id', ParseIntPipe) id: number,
     @Query() query: WorkspaceMemberRequest,
@@ -128,8 +130,15 @@ export class WorkspacesController {
   }
 
   @Get(':id/members/:userId')
-  @ApiOperation({ summary: 'Lấy thông tin chi tiết một thành viên trong workspace' })
-  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  @ApiOperation({
+    summary: 'Lấy thông tin chi tiết một thành viên trong workspace',
+  })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
   @ApiParam({
     name: 'userId',
     example: 1,
@@ -145,7 +154,12 @@ export class WorkspacesController {
 
   @Post(':id/members')
   @ApiOperation({ summary: 'Thêm thành viên mới vào workspace' })
-  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
   async addMember(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AddWorkspaceMemberDto,
@@ -156,9 +170,15 @@ export class WorkspacesController {
 
   @Patch(':id/members/:userId')
   @ApiOperation({
-    summary: 'Cập nhật vai trò (role) hoặc trạng thái của thành viên trong workspace',
+    summary:
+      'Cập nhật vai trò (role) hoặc trạng thái của thành viên trong workspace',
   })
-  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
   @ApiParam({
     name: 'userId',
     example: 1,
@@ -174,9 +194,58 @@ export class WorkspacesController {
     return this.workspaceMemberService.updateMember(id, userId, dto, user?.id);
   }
 
+  @Patch(':id/members/:userId/approve')
+  @ApiOperation({ summary: 'Chủ sở hữu duyệt thành viên vào workspace' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
+  @ApiParam({
+    name: 'userId',
+    example: 1,
+    type: Number,
+    description: 'ID người dùng cần duyệt',
+  })
+  async approveMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser('user') user?: UserResponse,
+  ) {
+    return this.workspaceMemberService.approveMember(id, userId, user?.id);
+  }
+
+  @Patch(':id/members/:userId/reject')
+  @ApiOperation({ summary: 'Chủ sở hữu từ chối yêu cầu tham gia workspace' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
+  @ApiParam({
+    name: 'userId',
+    example: 1,
+    type: Number,
+    description: 'ID người dùng bị từ chối',
+  })
+  async rejectMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser('user') user?: UserResponse,
+  ) {
+    return this.workspaceMemberService.rejectMember(id, userId, user?.id);
+  }
+
   @Delete(':id/members/:userId')
   @ApiOperation({ summary: 'Xóa thành viên khỏi workspace' })
-  @ApiParam({ name: 'id', example: 1, type: Number, description: 'ID workspace' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
   @ApiParam({
     name: 'userId',
     example: 1,

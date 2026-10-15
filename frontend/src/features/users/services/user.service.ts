@@ -135,4 +135,14 @@ export const userService = {
   deleteUser: async (id: number): Promise<UserItem> => {
     return apiClient.delete<unknown, UserItem>(`/users/${id}`);
   },
+
+  /**
+   * Tìm kiếm người dùng theo từ khóa (họ và tên hoặc email)
+   * GET /users/search?keyword=...
+   */
+  searchUsers: async (keyword: string): Promise<UserItem[]> => {
+    return apiClient.get<unknown, UserItem[]>("/users/search", {
+      params: { keyword },
+    });
+  },
 };

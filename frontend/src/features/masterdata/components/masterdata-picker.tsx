@@ -37,6 +37,14 @@ export interface MasterDataPickerProps {
    * Class tùy chỉnh cho SelectTrigger / Button
    */
   triggerClassName?: string;
+  /**
+   * Text nhãn cho tùy chọn chọn tất cả (ví dụ: "Tất cả trạng thái")
+   */
+  allOptionLabel?: string;
+  /**
+   * Cho phép xóa lựa chọn về rỗng
+   */
+  allowClear?: boolean;
 }
 
 export function MasterDataPicker({
@@ -46,6 +54,8 @@ export function MasterDataPicker({
   placeholder = "Chọn...",
   disabled = false,
   triggerClassName = "",
+  allOptionLabel,
+  allowClear = false,
 }: MasterDataPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
@@ -84,7 +94,11 @@ export function MasterDataPicker({
   }, [items, search]);
 
   const handleSelect = (val: string) => {
-    onValueChange?.(val);
+    if (allowClear && val === value) {
+      onValueChange?.("");
+    } else {
+      onValueChange?.(val);
+    }
     setOpen(false);
     setSearch("");
   };
@@ -125,6 +139,22 @@ export function MasterDataPicker({
 
         {/* Danh sách cuộn scrollable */}
         <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5 pt-1">
+          {allOptionLabel && (
+            <button
+              type="button"
+              onClick={() => handleSelect("")}
+              className={cn(
+                "flex items-center justify-between w-full px-2 py-1.5 text-xs rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors text-left",
+                (!value || value === "all") && "bg-accent/60 font-medium",
+              )}
+            >
+              <span className="truncate">{allOptionLabel}</span>
+              {(!value || value === "all") && (
+                <Check className="size-3.5 shrink-0 text-primary ml-1" />
+              )}
+            </button>
+          )}
+
           {filteredItems.length === 0 ? (
             <p className="p-2 text-center text-xs text-muted-foreground">
               {isLoading ? "Đang tải dữ liệu..." : "Không tìm thấy kết quả"}

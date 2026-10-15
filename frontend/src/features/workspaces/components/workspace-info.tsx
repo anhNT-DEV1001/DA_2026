@@ -57,7 +57,15 @@ export function WorkspaceInfo({
   className,
 }: WorkspaceInfoProps) {
   const [editModalOpen, setEditModalOpen] = React.useState(false);
-  const isPublic = workspace.mode === "public";
+  const modeLabel =
+    workspace.modeName || workspace.modeData?.name || workspace.mode;
+  const isPublic =
+    workspace.mode === "public" ||
+    workspace.mode === "WSM002" ||
+    (modeLabel
+      ? modeLabel.toLowerCase().includes("public") ||
+        modeLabel.toLowerCase().includes("công khai")
+      : false);
 
   return (
     <div className={cn("space-y-6 w-full", className)}>
@@ -85,27 +93,24 @@ export function WorkspaceInfo({
                   </Badge>
                 )}
 
-                <Badge
-                  variant={isPublic ? "secondary" : "outline"}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full",
-                    isPublic
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                      : "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
-                  )}
-                >
-                  {isPublic ? (
-                    <>
+                {modeLabel && (
+                  <Badge
+                    variant={isPublic ? "secondary" : "outline"}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full",
+                      isPublic
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                        : "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
+                    )}
+                  >
+                    {isPublic ? (
                       <Globe className="size-3" />
-                      Công khai
-                    </>
-                  ) : (
-                    <>
+                    ) : (
                       <Lock className="size-3" />
-                      Riêng tư
-                    </>
-                  )}
-                </Badge>
+                    )}
+                    {modeLabel}
+                  </Badge>
+                )}
               </div>
 
               <p className="text-xs font-mono text-muted-foreground flex items-center gap-1">

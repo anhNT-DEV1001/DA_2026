@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { useWorkspace } from "../hooks";
+import { MasterDataPicker } from "@/features/masterdata/components/masterdata-picker";
 import type {
   CreateWorkspaceDto,
   UpdateWorkspaceDto,
@@ -37,7 +38,7 @@ interface FormState {
   name: string;
   slug: string;
   description: string;
-  mode: "public" | "private";
+  mode: string;
   displayOrder: number;
   isStar: boolean;
 }
@@ -46,7 +47,7 @@ const initialFormState: FormState = {
   name: "",
   slug: "",
   description: "",
-  mode: "private",
+  mode: "",
   displayOrder: 1,
   isStar: false,
 };
@@ -90,7 +91,7 @@ export function WorkspaceDetailModal({
         name: workspace.name || "",
         slug: workspace.slug || "",
         description: workspace.description || "",
-        mode: workspace.mode || "private",
+        mode: workspace.mode || "",
         displayOrder: workspace.displayOrder ?? 1,
         isStar: Boolean(workspace.isStar),
       });
@@ -374,80 +375,18 @@ export function WorkspaceDetailModal({
           </div>
         </div>
 
-        {/* Chế độ hiển thị (Mode: private / public) */}
-        <div className="space-y-2 pt-1">
-          <Label className="text-xs font-semibold">Chế độ hiển thị</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* Private Mode */}
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => handleChange("mode", "private")}
-              onKeyDown={(e) =>
-                e.key === "Enter" && handleChange("mode", "private")
-              }
-              className={cn(
-                "flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none text-left",
-                form.mode === "private"
-                  ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                  : "border-border hover:bg-muted/40",
-              )}
-            >
-              <div
-                className={cn(
-                  "size-8 rounded-lg flex shrink-0 items-center justify-center mt-0.5",
-                  form.mode === "private"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                <Lock className="size-4" />
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-semibold text-foreground">
-                  Riêng tư (Private)
-                </span>
-                <span className="text-[11px] text-muted-foreground leading-snug">
-                  Chỉ những thành viên được phân quyền mới có thể truy cập.
-                </span>
-              </div>
-            </div>
-
-            {/* Public Mode */}
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => handleChange("mode", "public")}
-              onKeyDown={(e) =>
-                e.key === "Enter" && handleChange("mode", "public")
-              }
-              className={cn(
-                "flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none text-left",
-                form.mode === "public"
-                  ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                  : "border-border hover:bg-muted/40",
-              )}
-            >
-              <div
-                className={cn(
-                  "size-8 rounded-lg flex shrink-0 items-center justify-center mt-0.5",
-                  form.mode === "public"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                <Globe className="size-4" />
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-semibold text-foreground">
-                  Công khai (Public)
-                </span>
-                <span className="text-[11px] text-muted-foreground leading-snug">
-                  Tất cả thành viên trong hệ thống đều có thể tìm thấy và xem.
-                </span>
-              </div>
-            </div>
-          </div>
+        {/* Chế độ hiển thị (Mode) từ Master Data */}
+        <div className="space-y-1.5 pt-1">
+          <Label className="text-xs font-semibold">Chế độ Workspace</Label>
+          <MasterDataPicker
+            group="WSM"
+            value={form.mode}
+            onValueChange={(val) => handleChange("mode", val)}
+            placeholder="Chọn chế độ workspace..."
+          />
+          {errors.mode && (
+            <p className="text-[11px] text-destructive">{errors.mode}</p>
+          )}
         </div>
       </form>
     </Modal>

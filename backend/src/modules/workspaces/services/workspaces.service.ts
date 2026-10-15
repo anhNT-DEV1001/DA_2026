@@ -4,8 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, ILike, Not, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, ILike, Not, Repository } from 'typeorm';
 import { Workspace, WorkspaceMember } from '../entities/index.js';
+import { MasterData } from '../../admin/entites/index.js';
 import { UserResponse } from '../../users/dtos/index.js';
 import {
   CreateWorkspaceDto,
@@ -25,7 +26,14 @@ export class WorkspacesService {
     private readonly workspaceRepo: Repository<Workspace>,
     @InjectRepository(WorkspaceMember)
     private readonly memberRepo: Repository<WorkspaceMember>,
+    private readonly dataSource: DataSource,
   ) {}
+
+  private attachModeName(ws: Workspace): Workspace {
+    const modeData = (ws as any).modeData as MasterData | undefined;
+    ws.modeName = modeData?.name ?? ws.mode ?? null;
+    return ws;
+  }
 
   /**
    * Lấy danh sách workspace có hỗ trợ tìm kiếm và phân trang
@@ -34,10 +42,42 @@ export class WorkspacesService {
     query: WorkspaceRequest,
     user?: UserResponse,
   ): Promise<PageResponse<Workspace> | Workspace[]> {
+    // Nếu không có thông tin auth user, không hiển thị workspace nào
+    if (!user?.id) {
+      if (query.page !== undefined || query.limit !== undefined) {
+        const meta = new PageMetadataResponse({
+          pageRequest: query,
+          itemCount: 0,
+        });
+        return new PageResponse([], meta);
+      }
+      return [];
+    }
+
     const qb = this.workspaceRepo
       .createQueryBuilder('ws')
       .leftJoinAndSelect('ws.owner', 'owner')
       .leftJoinAndSelect('ws.members', 'members')
+      .leftJoinAndMapOne(
+        'ws.modeData',
+        MasterData,
+        'modeData',
+        'modeData.group = :modeGroup AND modeData.value = ws.mode',
+        { modeGroup: 'WSM' },
+      )
+      .leftJoin(
+        'ws.members',
+        'userMember',
+        'userMember.userId = :authUserId AND (userMember.status = :msActive)',
+        {
+          authUserId: user.id,
+          msActive: 'MS001',
+        },
+      )
+      // Chỉ hiển thị workspace thuộc quyền sở hữu hoặc người dùng là thành viên chính thức
+      .where('(ws.ownerId = :authUserId OR userMember.id IS NOT NULL)', {
+        authUserId: user.id,
+      })
       .orderBy('ws.isStar', 'DESC')
       .addOrderBy('ws.displayOrder', 'ASC')
       .addOrderBy('ws.createdAt', 'DESC');
@@ -72,11 +112,16 @@ export class WorkspacesService {
         .take(query.limit ?? 15)
         .getManyAndCount();
 
-      const meta = new PageMetadataResponse({ pageRequest: query, itemCount });
-      return new PageResponse(items, meta);
+      const mappedItems = items.map((item) => this.attachModeName(item));
+      const meta = new PageMetadataResponse({
+        pageRequest: query,
+        itemCount,
+      });
+      return new PageResponse(mappedItems, meta);
     }
 
-    return await qb.getMany();
+    const items = await qb.getMany();
+    return items.map((item) => this.attachModeName(item));
   }
 
   /**
@@ -91,10 +136,24 @@ export class WorkspacesService {
       .createQueryBuilder('ws')
       .leftJoinAndSelect('ws.owner', 'owner')
       .leftJoinAndSelect('ws.members', 'members')
-      .leftJoin('ws.members', 'userMember', 'userMember.userId = :userId', {
-        userId: user.id,
-      })
-      .where('ws.ownerId = :userId OR userMember.userId = :userId', {
+      .leftJoinAndMapOne(
+        'ws.modeData',
+        MasterData,
+        'modeData',
+        'modeData.group = :modeGroup AND modeData.value = ws.mode',
+        { modeGroup: 'WSM' },
+      )
+      .leftJoin(
+        'ws.members',
+        'userMember',
+        'userMember.userId = :userId AND (userMember.status = :msActive OR userMember.status = :activeStatus)',
+        {
+          userId: user.id,
+          msActive: 'MS001',
+          activeStatus: 'active',
+        },
+      )
+      .where('ws.ownerId = :userId OR userMember.id IS NOT NULL', {
         userId: user.id,
       })
       .orderBy('ws.isStar', 'DESC')
@@ -102,29 +161,34 @@ export class WorkspacesService {
       .addOrderBy('ws.createdAt', 'DESC')
       .getMany();
 
-    return workspaces;
+    return workspaces.map((item) => this.attachModeName(item));
   }
 
   /**
    * Lấy chi tiết workspace theo ID
    */
   async getWorkspaceById(id: number): Promise<Workspace> {
-    const ws = await this.workspaceRepo.findOne({
-      where: { id },
-      relations: {
-        owner: true,
-        members: {
-          user: true,
-          role: true,
-        },
-      },
-    });
+    const ws = await this.workspaceRepo
+      .createQueryBuilder('ws')
+      .leftJoinAndSelect('ws.owner', 'owner')
+      .leftJoinAndSelect('ws.members', 'members')
+      .leftJoinAndSelect('members.user', 'memberUser')
+      .leftJoinAndSelect('members.role', 'memberRole')
+      .leftJoinAndMapOne(
+        'ws.modeData',
+        MasterData,
+        'modeData',
+        'modeData.group = :modeGroup AND modeData.value = ws.mode',
+        { modeGroup: 'WSM' },
+      )
+      .where('ws.id = :id', { id })
+      .getOne();
 
     if (!ws) {
       throw new NotFoundException(`Không tìm thấy workspace với ID #${id}`);
     }
 
-    return ws;
+    return this.attachModeName(ws);
   }
 
   /**
@@ -134,16 +198,21 @@ export class WorkspacesService {
     slug: string,
     user?: UserResponse,
   ): Promise<Workspace> {
-    const ws = await this.workspaceRepo.findOne({
-      where: { slug },
-      relations: {
-        owner: true,
-        members: {
-          user: true,
-          role: true,
-        },
-      },
-    });
+    const ws = await this.workspaceRepo
+      .createQueryBuilder('ws')
+      .leftJoinAndSelect('ws.owner', 'owner')
+      .leftJoinAndSelect('ws.members', 'members')
+      .leftJoinAndSelect('members.user', 'memberUser')
+      .leftJoinAndSelect('members.role', 'memberRole')
+      .leftJoinAndMapOne(
+        'ws.modeData',
+        MasterData,
+        'modeData',
+        'modeData.group = :modeGroup AND modeData.value = ws.mode',
+        { modeGroup: 'WSM' },
+      )
+      .where('ws.slug = :slug', { slug })
+      .getOne();
 
     if (!ws) {
       throw new NotFoundException(
@@ -151,7 +220,7 @@ export class WorkspacesService {
       );
     }
 
-    return ws;
+    return this.attachModeName(ws);
   }
 
   /**
@@ -174,38 +243,65 @@ export class WorkspacesService {
       slug = `workspace-${Date.now()}`;
     }
 
-    // Kiểm tra tính duy nhất của slug
-    const isSlugExist = await this.workspaceRepo.exists({
-      where: { slug },
-    });
+    // Bọc toàn bộ thao tác ghi vào transaction
+    const savedWorkspace = await this.dataSource.transaction(
+      async (transactionalEntityManager) => {
+        // Kiểm tra slug thông qua entityManager của transaction
+        const isSlugExist = await transactionalEntityManager.exists(Workspace, {
+          where: { slug },
+        });
 
-    if (isSlugExist) {
-      if (dto.slug?.trim()) {
-        throw new BadRequestException(
-          `Đường dẫn (slug) "${slug}" đã tồn tại trên hệ thống. Vui lòng chọn slug khác.`,
+        if (isSlugExist) {
+          if (dto.slug?.trim()) {
+            throw new BadRequestException(
+              `Đường dẫn (slug) "${slug}" đã tồn tại trên hệ thống. Vui lòng chọn slug khác.`,
+            );
+          }
+          slug = `${slug}-${Math.random().toString(36).substring(2, 7)}`;
+        }
+
+        // Tạo và lưu Workspace
+        const workspaceData = transactionalEntityManager.create(Workspace, {
+          name: dto.name.trim(),
+          description: dto.description?.trim() ?? null,
+          slug,
+          ownerId,
+          mode: dto.mode ?? null,
+          displayOrder: dto.displayOrder ?? 1,
+          isStar: dto.isStar ?? false,
+          createdBy: user?.id ?? null,
+          updatedBy: user?.id ?? null,
+        });
+
+        const workspace = await transactionalEntityManager.save(
+          Workspace,
+          workspaceData,
         );
-      }
-      // Nếu là slug tự sinh từ name thì nối thêm hậu tố duy nhất
-      slug = `${slug}-${Math.random().toString(36).substring(2, 7)}`;
-    }
 
-    const workspaceData = this.workspaceRepo.create({
-      name: dto.name.trim(),
-      description: dto.description?.trim() ?? null,
-      slug,
-      ownerId,
-      mode: dto.mode ?? 'private',
-      displayOrder: dto.displayOrder ?? 1,
-      isStar: dto.isStar ?? false,
-      createdBy: user?.id ?? null,
-      updatedBy: user?.id ?? null,
-    });
+        // Tạo và lưu Thành viên mặc định (Owner)
+        const workspaceMemData = transactionalEntityManager.create(
+          WorkspaceMember,
+          {
+            workspaceId: workspace.id,
+            userId: user?.id ?? ownerId,
+            status: 'MS001',
+            joinedAt: new Date(),
+            createdBy: user?.id ?? null,
+          },
+        );
 
-    const savedWorkspace = await this.workspaceRepo.save(workspaceData);
+        await transactionalEntityManager.save(
+          WorkspaceMember,
+          workspaceMemData,
+        );
 
-    return savedWorkspace;
+        return workspace;
+      },
+    );
+
+    // Truy vấn dữ liệu hoàn chỉnh sau khi transaction đã commit thành công
+    return this.getWorkspaceById(savedWorkspace.id);
   }
-
   /**
    * Cập nhật thông tin workspace
    */

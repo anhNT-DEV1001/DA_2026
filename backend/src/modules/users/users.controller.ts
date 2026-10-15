@@ -23,6 +23,7 @@ import {
   getSchemaPath,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 
@@ -42,6 +43,19 @@ export class UsersController {
   @ApiOperation({ summary: 'Lấy danh sách người dùng' })
   async getListUsersController(@Query() query: UserRequest) {
     const response = await this.userService.getListUsers(query);
+    return response;
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Tìm kiếm người dùng theo tên hoặc email' })
+  @ApiQuery({
+    name: 'keyword',
+    required: false,
+    type: String,
+    description: 'Từ khóa tìm kiếm (họ và tên hoặc email)',
+  })
+  async searchUsersController(@Query('keyword') keyword?: string) {
+    const response = await this.userService.searchUsers(keyword ?? '');
     return response;
   }
 

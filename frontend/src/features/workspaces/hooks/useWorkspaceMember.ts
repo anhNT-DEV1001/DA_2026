@@ -170,6 +170,60 @@ export function useWorkspaceMember(workspaceId?: number, userId?: number) {
     },
   });
 
+  const approveMemberMutation = useMutation({
+    mutationFn: ({
+      workspaceId: targetWsId,
+      userId: targetUserId,
+    }: {
+      workspaceId?: number;
+      userId?: number;
+    } = {}) => {
+      const activeWsId = targetWsId ?? workspaceId;
+      const activeUserId = targetUserId ?? userId;
+      if (!activeWsId) {
+        throw new Error("Workspace ID là bắt buộc khi duyệt thành viên.");
+      }
+      if (!activeUserId) {
+        throw new Error("User ID là bắt buộc khi duyệt thành viên.");
+      }
+      return workspaceMemberService.approveMember(activeWsId, activeUserId);
+    },
+    onSuccess: (_, variables) => {
+      const activeWsId = variables?.workspaceId ?? workspaceId;
+      const activeUserId = variables?.userId ?? userId;
+      if (activeWsId) {
+        invalidateMemberQueries(activeWsId, activeUserId);
+      }
+    },
+  });
+
+  const rejectMemberMutation = useMutation({
+    mutationFn: ({
+      workspaceId: targetWsId,
+      userId: targetUserId,
+    }: {
+      workspaceId?: number;
+      userId?: number;
+    } = {}) => {
+      const activeWsId = targetWsId ?? workspaceId;
+      const activeUserId = targetUserId ?? userId;
+      if (!activeWsId) {
+        throw new Error("Workspace ID là bắt buộc khi từ chối thành viên.");
+      }
+      if (!activeUserId) {
+        throw new Error("User ID là bắt buộc khi từ chối thành viên.");
+      }
+      return workspaceMemberService.rejectMember(activeWsId, activeUserId);
+    },
+    onSuccess: (_, variables) => {
+      const activeWsId = variables?.workspaceId ?? workspaceId;
+      const activeUserId = variables?.userId ?? userId;
+      if (activeWsId) {
+        invalidateMemberQueries(activeWsId, activeUserId);
+      }
+    },
+  });
+
   return {
     // Queries
     member: memberQuery.data,
@@ -189,6 +243,14 @@ export function useWorkspaceMember(workspaceId?: number, userId?: number) {
     removeMember: removeMemberMutation.mutateAsync,
     isRemoving: removeMemberMutation.isPending,
     removeError: removeMemberMutation.error,
+
+    approveMember: approveMemberMutation.mutateAsync,
+    isApproving: approveMemberMutation.isPending,
+    approveError: approveMemberMutation.error,
+
+    rejectMember: rejectMemberMutation.mutateAsync,
+    isRejecting: rejectMemberMutation.isPending,
+    rejectError: rejectMemberMutation.error,
   };
 }
 

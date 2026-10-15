@@ -16,6 +16,10 @@ import {
 import type { WorkspaceMemberItem, WorkspaceMemberQueryParams } from "../types";
 import { WorkspaceMemberDetailModal } from "./workspace-member-detail";
 import {
+  MasterDataSelect,
+  useMasterDataByGroup,
+} from "@/features/masterdata";
+import {
   Calendar,
   CheckCircle2,
   Clock,
@@ -81,6 +85,25 @@ export function WorkspaceMember({
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
+  // Master data nhóm MS (Trạng thái thành viên)
+  const { data: msMasterData = [] } = useMasterDataByGroup("MS");
+
+  // Map tra cứu tên trạng thái theo code MS từ master data
+  const msMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    msMasterData.forEach((item) => {
+      if (item.value && item.name) {
+        map.set(item.value.toUpperCase(), item.name);
+        map.set(item.value.toLowerCase(), item.name);
+      }
+    });
+    // Fallback nếu dữ liệu cũ còn lưu 'active', 'pending', 'rejected'
+    if (!map.has("active")) map.set("active", map.get("MS001") || "Tham gia");
+    if (!map.has("pending")) map.set("pending", map.get("MS002") || "Chờ duyệt");
+    if (!map.has("rejected")) map.set("rejected", map.get("MS003") || "Từ chối");
+    return map;
+  }, [msMasterData]);
+
   // Modal states
   const [modalOpen, setModalOpen] = React.useState(false);
   const [selectedMember, setSelectedMember] =
@@ -103,7 +126,8 @@ export function WorkspaceMember({
       page,
       limit: pageSize,
       search: debouncedSearch || undefined,
-      status: statusFilter === "all" ? undefined : statusFilter,
+      status:
+        statusFilter === "all" || !statusFilter ? undefined : statusFilter,
     };
   }, [page, pageSize, debouncedSearch, statusFilter]);
 
@@ -113,7 +137,14 @@ export function WorkspaceMember({
     queryParams,
   );
 
-  const { removeMember, isRemoving } = useWorkspaceMember(workspaceId);
+  const {
+    removeMember,
+    isRemoving,
+    approveMember,
+    isApproving,
+    rejectMember,
+    isRejecting,
+  } = useWorkspaceMember(workspaceId);
 
   // Chuẩn hóa danh sách thành viên từ API response
   const members: WorkspaceMemberItem[] = React.useMemo(() => {
@@ -149,6 +180,52 @@ export function WorkspaceMember({
 
   const handleDeleteMember = (member: WorkspaceMemberItem) => {
     setMemberToDelete(member);
+  };
+
+  const handleApproveMember = async (member: WorkspaceMemberItem) => {
+    try {
+      await approveMember({
+        workspaceId,
+        userId: member.userId,
+      });
+
+      toast.add({
+        title: "Đã duyệt thành viên",
+        description: `Đã phê duyệt "${member.user?.fullName || member.user?.username}" vào workspace.`,
+        type: "success",
+      });
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.add({
+        title: "Duyệt thành viên thất bại",
+        description:
+          error?.message || "Không thể duyệt thành viên. Vui lòng thử lại!",
+        type: "error",
+      });
+    }
+  };
+
+  const handleRejectMember = async (member: WorkspaceMemberItem) => {
+    try {
+      await rejectMember({
+        workspaceId,
+        userId: member.userId,
+      });
+
+      toast.add({
+        title: "Đã từ chối thành viên",
+        description: `Đã từ chối yêu cầu của "${member.user?.fullName || member.user?.username}".`,
+        type: "success",
+      });
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.add({
+        title: "Từ chối thành viên thất bại",
+        description:
+          error?.message || "Không thể từ chối thành viên. Vui lòng thử lại!",
+        type: "error",
+      });
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -258,28 +335,51 @@ export function WorkspaceMember({
         id: "status",
         header: "Trạng thái",
         align: "center",
-        width: 130,
+        width: 140,
         cell: ({ row }) => {
-          const status = row.status?.toLowerCase() || "active";
-          if (status === "active") {
+          const rawStatus = row.status || "MS001";
+          const statusLower = rawStatus.toLowerCase();
+          const statusName =
+            msMap.get(rawStatus.toUpperCase()) ||
+            msMap.get(statusLower) ||
+            rawStatus;
+
+          const isActive = statusLower === "active" || statusLower === "ms001";
+          const isPending =
+            statusLower === "pending" || statusLower === "ms002";
+          const isRejected =
+            statusLower === "rejected" || statusLower === "ms003";
+
+          if (isActive) {
             return (
               <Badge
                 variant="outline"
                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
               >
                 <CheckCircle2 className="size-3" />
-                Hoạt động
+                {statusName}
               </Badge>
             );
           }
-          if (status === "pending") {
+          if (isPending) {
             return (
               <Badge
                 variant="outline"
                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
               >
                 <Clock className="size-3" />
-                Chờ duyệt
+                {statusName}
+              </Badge>
+            );
+          }
+          if (isRejected) {
+            return (
+              <Badge
+                variant="outline"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+              >
+                <XCircle className="size-3" />
+                {statusName}
               </Badge>
             );
           }
@@ -289,7 +389,7 @@ export function WorkspaceMember({
               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20"
             >
               <XCircle className="size-3" />
-              Tạm ngưng
+              {statusName}
             </Badge>
           );
         },
@@ -309,11 +409,38 @@ export function WorkspaceMember({
         id: "actions",
         header: "Thao tác",
         align: "right",
-        width: 100,
+        width: 130,
         cell: ({ row }) => {
           if (!canManage) return null;
+          const status = row.status?.toLowerCase();
+          const isPending = status === "pending" || status === "ms002";
+
           return (
             <div className="flex items-center justify-end gap-1">
+              {isPending && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="size-7 hover:bg-emerald-500/10 text-emerald-600 hover:text-emerald-700"
+                    onClick={() => handleApproveMember(row)}
+                    disabled={isApproving || isRejecting}
+                    title="Phê duyệt tham gia"
+                  >
+                    <CheckCircle2 className="size-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="size-7 hover:bg-rose-500/10 text-rose-600 hover:text-rose-700"
+                    onClick={() => handleRejectMember(row)}
+                    disabled={isApproving || isRejecting}
+                    title="Từ chối yêu cầu"
+                  >
+                    <XCircle className="size-3.5" />
+                  </Button>
+                </>
+              )}
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -338,7 +465,7 @@ export function WorkspaceMember({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, pageSize, canManage],
+    [page, pageSize, canManage, isApproving, isRejecting, msMap],
   );
 
   return (
@@ -357,20 +484,20 @@ export function WorkspaceMember({
             />
           </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            aria-label="Lọc theo trạng thái"
-            className="h-9 rounded-md border border-input bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="active">Hoạt động (Active)</option>
-            <option value="pending">Chờ xác nhận (Pending)</option>
-            <option value="inactive">Tạm ngưng (Inactive)</option>
-          </select>
+          <div className="w-44 shrink-0">
+            <MasterDataSelect
+              group="MS"
+              value={statusFilter === "all" ? "" : statusFilter}
+              onValueChange={(val) => {
+                setStatusFilter(val || "all");
+                setPage(1);
+              }}
+              allOptionLabel="Tất cả trạng thái"
+              placeholder="Tất cả trạng thái"
+              allowClear
+              triggerClassName="h-9 w-full text-xs"
+            />
+          </div>
         </div>
 
         {/* Nút hành động */}

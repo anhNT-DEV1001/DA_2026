@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -117,10 +118,7 @@ export class WorkspaceMemberService {
   /**
    * Lấy chi tiết thông tin một thành viên trong workspace
    */
-  async findOne(
-    workspaceId: number,
-    userId: number,
-  ): Promise<WorkspaceMember> {
+  async findOne(workspaceId: number, userId: number): Promise<WorkspaceMember> {
     const member = await this.workmemRepo
       .createQueryBuilder('wm')
       .leftJoinAndSelect('wm.role', 'role')
@@ -186,23 +184,55 @@ export class WorkspaceMemberService {
       );
     }
 
-    // 4. Kiểm tra user đã là thành viên của workspace hay chưa
+    // 4. Xác định trạng thái ban đầu:
+    // - Nếu là Owner của workspace thêm: duyệt thẳng vào trạng thái "Tham gia" (MS001)
+    // - Nếu workspace Private (WSM001) & không phải Owner thêm: cần duyệt => "Chờ duyệt" (MS002), joinedAt = null
+    // - Nếu workspace Public (WSM002): không cần duyệt => "Tham gia" (MS001), joinedAt = new Date()
+    const isOwner = currentUserId === workspace.ownerId;
+    const isPrivate = workspace.mode === 'WSM001';
+
+    let status = 'MS001';
+    let joinedAt: Date | null = new Date();
+
+    if (!isOwner && isPrivate) {
+      status = 'MS002'; // Chờ duyệt
+      joinedAt = null;
+    }
+
+    // 5. Kiểm tra user đã là thành viên của workspace hay chưa
     const existingMember = await this.workmemRepo.findOne({
       where: { workspaceId, userId: dto.userId },
     });
     if (existingMember) {
-      throw new BadRequestException(
-        `Người dùng #${dto.userId} đã là thành viên của workspace #${workspaceId}.`,
-      );
+      if (existingMember.status === 'MS002') {
+        throw new BadRequestException(
+          `Yêu cầu tham gia workspace của người dùng #${dto.userId} đang chờ chủ sở hữu phê duyệt.`,
+        );
+      }
+      if (
+        existingMember.status === 'MS001' ||
+        existingMember.status === 'active'
+      ) {
+        throw new BadRequestException(
+          `Người dùng #${dto.userId} đã là thành viên của workspace #${workspaceId}.`,
+        );
+      }
+      // Nếu trước đó bị từ chối (MS003), cho phép gửi lại yêu cầu / thêm lại
+      existingMember.roleId = dto.roleId;
+      existingMember.status = status;
+      existingMember.joinedAt = joinedAt;
+      existingMember.updatedBy = currentUserId ?? null;
+      await this.workmemRepo.save(existingMember);
+      return this.findOne(workspaceId, existingMember.userId);
     }
 
-    // 5. Khởi tạo và lưu thông tin thành viên
+    // 6. Khởi tạo và lưu thông tin thành viên
     const newMember = this.workmemRepo.create({
       workspaceId,
       userId: dto.userId,
       roleId: dto.roleId,
-      status: dto.status ?? 'active',
-      joinedAt: new Date(),
+      status: status,
+      joinedAt: joinedAt,
       createdBy: currentUserId ?? null,
     });
 
@@ -210,6 +240,94 @@ export class WorkspaceMemberService {
 
     // Trả về dữ liệu kèm quan hệ role & user
     return this.findOne(workspaceId, savedMember.userId);
+  }
+
+  /**
+   * Phê duyệt thành viên vào workspace (chỉ dành cho Owner)
+   */
+  async approveMember(
+    workspaceId: number,
+    userId: number,
+    currentUserId?: number,
+  ): Promise<WorkspaceMember> {
+    const workspace = await this.workspaceRepo.findOneBy({ id: workspaceId });
+    if (!workspace) {
+      throw new NotFoundException(
+        `Workspace với ID #${workspaceId} không tồn tại.`,
+      );
+    }
+
+    // Chỉ chủ sở hữu (Owner) mới có quyền duyệt thành viên
+    if (workspace.ownerId !== currentUserId) {
+      throw new ForbiddenException(
+        'Chỉ chủ sở hữu (Owner) của workspace mới có quyền phê duyệt thành viên.',
+      );
+    }
+
+    const member = await this.workmemRepo.findOne({
+      where: { workspaceId, userId },
+    });
+
+    if (!member) {
+      throw new NotFoundException(
+        `Không tìm thấy yêu cầu thành viên với User ID #${userId} trong workspace #${workspaceId}.`,
+      );
+    }
+
+    member.status = 'MS001'; // Tham gia
+    member.joinedAt = new Date();
+    member.updatedBy = currentUserId ?? null;
+
+    await this.workmemRepo.save(member);
+    return this.findOne(workspaceId, userId);
+  }
+
+  /**
+   * Từ chối yêu cầu tham gia workspace của thành viên (chỉ dành cho Owner)
+   */
+  async rejectMember(
+    workspaceId: number,
+    userId: number,
+    currentUserId?: number,
+  ): Promise<{ message: string }> {
+    const workspace = await this.workspaceRepo.findOneBy({ id: workspaceId });
+    if (!workspace) {
+      throw new NotFoundException(
+        `Workspace với ID #${workspaceId} không tồn tại.`,
+      );
+    }
+
+    // Chỉ chủ sở hữu (Owner) mới có quyền từ chối
+    if (workspace.ownerId !== currentUserId) {
+      throw new ForbiddenException(
+        'Chỉ chủ sở hữu (Owner) của workspace mới có quyền từ chối yêu cầu tham gia.',
+      );
+    }
+
+    if (workspace.ownerId === userId) {
+      throw new BadRequestException(
+        'Không thể từ chối chính chủ sở hữu của workspace.',
+      );
+    }
+
+    const member = await this.workmemRepo.findOne({
+      where: { workspaceId, userId },
+    });
+
+    if (!member) {
+      throw new NotFoundException(
+        `Không tìm thấy yêu cầu thành viên với User ID #${userId} trong workspace #${workspaceId}.`,
+      );
+    }
+
+    // Đánh dấu từ chối (MS003)
+    member.status = 'MS003';
+    member.updatedBy = currentUserId ?? null;
+    await this.workmemRepo.save(member);
+
+    return {
+      message: `Đã từ chối yêu cầu tham gia của người dùng #${userId} thành công.`,
+    };
   }
 
   /**
@@ -307,28 +425,16 @@ export class WorkspaceMemberService {
     });
 
     if (existMember) {
-      return this.updateMember(
-        workspaceId,
-        userId,
-        { roleId },
-        currentUserId,
-      );
+      return this.updateMember(workspaceId, userId, { roleId }, currentUserId);
     }
 
-    return this.addMember(
-      workspaceId,
-      { userId, roleId },
-      currentUserId,
-    );
+    return this.addMember(workspaceId, { userId, roleId }, currentUserId);
   }
 
   /**
    * Tương thích ngược: Xóa thành viên
    */
-  async removeWorkspaceMember(
-    workspaceId: number,
-    userId: number,
-  ) {
+  async removeWorkspaceMember(workspaceId: number, userId: number) {
     return this.removeMember(workspaceId, userId);
   }
 }

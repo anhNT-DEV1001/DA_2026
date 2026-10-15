@@ -357,7 +357,9 @@ export function ProfileForm() {
                   id="fixed-roles"
                   value={
                     roles && roles.length > 0
-                      ? roles.map((role) => role.name).join(", ")
+                      ? roles
+                          .map((role) => role.description || role.name)
+                          .join(", ")
                       : "Chưa cấp quyền"
                   }
                   disabled

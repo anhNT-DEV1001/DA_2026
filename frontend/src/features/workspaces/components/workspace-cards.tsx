@@ -289,7 +289,15 @@ export function WorkspaceCards({
         /* Workspaces Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {items.map((workspace) => {
-            const isPublic = workspace.mode === "public";
+            const modeLabel =
+              workspace.modeName || workspace.modeData?.name || workspace.mode;
+            const isPublic =
+              workspace.mode === "public" ||
+              workspace.mode === "WSM002" ||
+              (modeLabel
+                ? modeLabel.toLowerCase().includes("public") ||
+                  modeLabel.toLowerCase().includes("công khai")
+                : false);
             const memberCount = workspace.members?.length ?? 0;
 
             return (
@@ -346,27 +354,24 @@ export function WorkspaceCards({
                   {/* Mode Badge & Description */}
                   <div className="mt-3.5 space-y-2.5">
                     <div className="flex items-center gap-2">
-                      <Badge
-                        variant={isPublic ? "secondary" : "outline"}
-                        className={cn(
-                          "inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full",
-                          isPublic
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                            : "bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20",
-                        )}
-                      >
-                        {isPublic ? (
-                          <>
+                      {modeLabel && (
+                        <Badge
+                          variant={isPublic ? "secondary" : "outline"}
+                          className={cn(
+                            "inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full",
+                            isPublic
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : "bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20",
+                          )}
+                        >
+                          {isPublic ? (
                             <Globe className="size-2.5" />
-                            Công khai
-                          </>
-                        ) : (
-                          <>
+                          ) : (
                             <Lock className="size-2.5" />
-                            Riêng tư
-                          </>
-                        )}
-                      </Badge>
+                          )}
+                          {modeLabel}
+                        </Badge>
+                      )}
 
                       {typeof workspace.displayOrder === "number" && (
                         <span className="text-[10px] text-muted-foreground font-mono">

@@ -270,4 +270,23 @@ export class UsersService {
     });
     return existUsers;
   }
+
+  async searchUsers(keyword: string): Promise<UserResponse[]> {
+    if (!keyword || !keyword.trim()) {
+      return [];
+    }
+
+    const searchTerm = `%${keyword.trim().toLowerCase()}%`;
+
+    const users = await this.userRepo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userRoles', 'userRoles')
+      .leftJoinAndSelect('userRoles.role', 'role')
+      .where('LOWER(user.fullName) LIKE :keyword', { keyword: searchTerm })
+      .orWhere('LOWER(user.email) LIKE :keyword', { keyword: searchTerm })
+      .orderBy('user.createdAt', 'DESC')
+      .getMany();
+
+    return users.map((u) => new UserResponse().mapToResponse(u));
+  }
 }

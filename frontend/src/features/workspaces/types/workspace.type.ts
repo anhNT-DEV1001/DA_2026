@@ -10,7 +10,14 @@ export interface WorkspaceItem {
   description: string | null;
   slug: string;
   ownerId: number;
-  mode: "public" | "private";
+  mode: string | null;
+  modeName?: string | null;
+  modeData?: {
+    id?: number;
+    group?: string;
+    value?: string;
+    name?: string;
+  } | null;
   displayOrder?: number;
   isStar?: boolean;
   owner?: UserItem;
@@ -29,7 +36,7 @@ export interface CreateWorkspaceDto {
   name: string;
   description?: string;
   slug?: string;
-  mode?: "public" | "private";
+  mode?: string;
   ownerId?: number;
   displayOrder?: number;
   isStar?: boolean;
@@ -39,7 +46,7 @@ export interface UpdateWorkspaceDto {
   name?: string;
   description?: string;
   slug?: string;
-  mode?: "public" | "private";
+  mode?: string;
   ownerId?: number;
   displayOrder?: number;
   isStar?: boolean;
@@ -47,7 +54,7 @@ export interface UpdateWorkspaceDto {
 
 export interface WorkspaceQueryParams {
   search?: string;
-  mode?: "public" | "private";
+  mode?: string;
   ownerId?: number;
   isStar?: boolean;
   page?: number;

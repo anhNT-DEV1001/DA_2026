@@ -300,7 +300,15 @@ export function WorkspaceTable({
         align: "center",
         width: 130,
         cell: ({ row }) => {
-          const isPublic = row.mode === "public";
+          const modeLabel = row.modeName || row.modeData?.name || row.mode;
+          if (!modeLabel) return <span className="text-muted-foreground">-</span>;
+
+          const isPublic =
+            row.mode === "public" ||
+            row.mode === "WSM002" ||
+            modeLabel.toLowerCase().includes("public") ||
+            modeLabel.toLowerCase().includes("công khai");
+
           return (
             <Badge
               variant={isPublic ? "secondary" : "outline"}
@@ -312,16 +320,11 @@ export function WorkspaceTable({
               )}
             >
               {isPublic ? (
-                <>
-                  <Globe className="size-3" />
-                  Công khai
-                </>
+                <Globe className="size-3" />
               ) : (
-                <>
-                  <Lock className="size-3" />
-                  Riêng tư
-                </>
+                <Lock className="size-3" />
               )}
+              {modeLabel}
             </Badge>
           );
         },

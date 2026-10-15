@@ -9,6 +9,8 @@ export const USER_QUERY_KEYS = {
   lists: () => [...USER_QUERY_KEYS.all, "list"] as const,
   list: (params?: UserQueryParams) =>
     [...USER_QUERY_KEYS.lists(), params] as const,
+  searches: () => [...USER_QUERY_KEYS.all, "search"] as const,
+  search: (keyword: string) => [...USER_QUERY_KEYS.searches(), keyword] as const,
   details: () => [...USER_QUERY_KEYS.all, "detail"] as const,
   detail: (id: number) => [...USER_QUERY_KEYS.details(), id] as const,
 };
@@ -17,6 +19,16 @@ export function useUserList(params?: UserQueryParams) {
   return useQuery({
     queryKey: USER_QUERY_KEYS.list(params),
     queryFn: () => userService.getListUsers(params),
+  });
+}
+
+export function useUserSearch(keyword: string) {
+  const normalizedKeyword = keyword.trim();
+  return useQuery({
+    queryKey: USER_QUERY_KEYS.search(normalizedKeyword),
+    queryFn: () => userService.searchUsers(normalizedKeyword),
+    enabled: normalizedKeyword.length > 0,
+    staleTime: 1000 * 30, // 30s
   });
 }
 

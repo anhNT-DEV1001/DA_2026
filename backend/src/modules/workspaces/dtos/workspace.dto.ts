@@ -42,16 +42,12 @@ export class CreateWorkspaceDto {
   slug?: string;
 
   @ApiPropertyOptional({
-    example: 'private',
-    enum: ['public', 'private'],
-    description: 'Chế độ hiển thị: public hoặc private',
-    default: 'private',
+    example: 'WSM001',
+    description: 'Chế độ workspace (mã master data từ nhóm WSM)',
   })
   @IsOptional()
-  @IsEnum(['public', 'private'], {
-    message: 'Chế độ workspace phải là public hoặc private.',
-  })
-  mode?: 'public' | 'private';
+  @IsString({ message: 'Chế độ workspace phải là chuỗi ký tự.' })
+  mode?: string;
 
   @ApiPropertyOptional({
     example: 1,
@@ -95,13 +91,12 @@ export class WorkspaceRequest extends PaginanteRequest {
   search?: string;
 
   @ApiPropertyOptional({
-    example: 'private',
-    enum: ['public', 'private'],
-    description: 'Lọc theo chế độ workspace (public / private)',
+    example: 'WSM001',
+    description: 'Lọc theo chế độ workspace (mã master data nhóm WSM)',
   })
   @IsOptional()
-  @IsEnum(['public', 'private'])
-  mode?: 'public' | 'private';
+  @IsString()
+  mode?: string;
 
   @ApiPropertyOptional({
     example: 1,

@@ -8,8 +8,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { useWorkspaceMember } from "../hooks";
-import { useUserList } from "@/features/users/hooks";
+import { useUserSearch } from "@/features/users/hooks";
 import { useRoleList } from "@/features/roles/hooks";
+import type { UserItem } from "@/features/users/types";
 import type {
   AddWorkspaceMemberDto,
   UpdateWorkspaceMemberDto,
@@ -19,11 +20,14 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  Loader2,
   Pencil,
+  Search,
   Shield,
   User,
   UserPlus,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -46,22 +50,28 @@ interface FormState {
 
 const STATUS_OPTIONS = [
   {
-    value: "active",
+    value: "MS001",
     label: "Hoạt động (Active)",
     icon: CheckCircle2,
     color: "text-emerald-500",
+  },
+  {
+    value: "MS002",
+    label: "Chờ xác nhận (Pending)",
+    icon: Clock,
+    color: "text-amber-500",
+  },
+  {
+    value: "MS003",
+    label: "Bị từ chối (Rejected)",
+    icon: XCircle,
+    color: "text-rose-500",
   },
   {
     value: "inactive",
     label: "Tạm ngưng (Inactive)",
     icon: XCircle,
     color: "text-slate-400",
-  },
-  {
-    value: "pending",
-    label: "Chờ xác nhận (Pending)",
-    icon: Clock,
-    color: "text-amber-500",
   },
 ];
 
@@ -88,21 +98,10 @@ export function WorkspaceMemberDetailModal({
 
   const isSubmitting = isAdding || isUpdating;
 
-  // Lấy danh sách Users để chọn khi thêm mới
-  const { data: usersData, isLoading: isLoadingUsers } = useUserList({
-    limit: 100,
-  });
-
   // Lấy danh sách Roles để gán quyền
   const { data: rolesData, isLoading: isLoadingRoles } = useRoleList({
     limit: 100,
   });
-
-  const availableUsers = React.useMemo(() => {
-    if (!usersData) return [];
-    if (Array.isArray(usersData)) return usersData;
-    return usersData.items || [];
-  }, [usersData]);
 
   const availableRoles = React.useMemo(() => {
     if (!rolesData) return [];
@@ -113,41 +112,79 @@ export function WorkspaceMemberDetailModal({
   const [form, setForm] = React.useState<FormState>({
     userId: undefined,
     roleId: undefined,
-    status: "active",
+    status: "MS001",
   });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  // State tìm kiếm người dùng với dropdown autocomplete
   const [userSearch, setUserSearch] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const [selectedUser, setSelectedUser] = React.useState<UserItem | null>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Debounce từ khóa tìm kiếm (300ms)
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(userSearch.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [userSearch]);
+
+  // Call API tìm kiếm người dùng khi có từ khóa
+  const {
+    data: searchResults = [],
+    isLoading: isSearchingUsers,
+    isFetching: isFetchingUsers,
+  } = useUserSearch(debouncedSearch);
+
+  const isSearching =
+    (userSearch.trim().length > 0 && userSearch.trim() !== debouncedSearch) ||
+    isSearchingUsers ||
+    isFetchingUsers;
+
+  // Đóng dropdown khi click ra ngoài
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Đồng bộ form khi mở modal hoặc thay đổi member
   React.useEffect(() => {
     if (member) {
+      let currentStatus = member.status || "MS001";
+      if (currentStatus === "active") currentStatus = "MS001";
+      if (currentStatus === "pending") currentStatus = "MS002";
       setForm({
         userId: member.userId,
         roleId: member.roleId,
-        status: member.status || "active",
+        status: currentStatus,
       });
+      setSelectedUser(null);
     } else {
       setForm({
         userId: undefined,
         roleId: undefined,
-        status: "active",
+        status: "MS001",
       });
       setUserSearch("");
+      setDebouncedSearch("");
+      setSelectedUser(null);
+      setIsDropdownOpen(false);
     }
     setErrors({});
   }, [member, open]);
-
-  // Lọc users theo từ khóa tìm kiếm khi thêm mới
-  const filteredUsers = React.useMemo(() => {
-    if (!userSearch.trim()) return availableUsers;
-    const term = userSearch.toLowerCase().trim();
-    return availableUsers.filter(
-      (u) =>
-        u.fullName?.toLowerCase().includes(term) ||
-        u.username?.toLowerCase().includes(term) ||
-        u.email?.toLowerCase().includes(term),
-    );
-  }, [availableUsers, userSearch]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -295,81 +332,179 @@ export function WorkspaceMemberDetailModal({
               Chọn người dùng <span className="text-destructive">*</span>
             </Label>
 
-            {/* Input lọc nhanh user */}
-            <input
-              type="text"
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              placeholder="Tìm kiếm người dùng theo tên, username hoặc email..."
-              className="w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-
-            {isLoadingUsers ? (
-              <div className="p-4 text-center text-xs text-muted-foreground">
-                Đang tải danh sách người dùng...
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="p-4 text-center text-xs text-muted-foreground italic rounded-lg border border-dashed">
-                Không tìm thấy người dùng phù hợp.
-              </div>
-            ) : (
-              <div className="max-h-48 overflow-y-auto space-y-1.5 p-1 rounded-lg border border-border/70 bg-card">
-                {filteredUsers.map((user) => {
-                  const isSelected = form.userId === user.id;
-                  return (
-                    <div
-                      key={user.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        setForm((prev) => ({ ...prev, userId: user.id }));
-                        if (errors.userId) {
-                          setErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.userId;
-                            return next;
-                          });
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          setForm((prev) => ({ ...prev, userId: user.id }));
-                        }
-                      }}
-                      className={cn(
-                        "flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors text-xs select-none",
-                        isSelected
-                          ? "bg-primary/10 border border-primary/30 text-foreground"
-                          : "hover:bg-muted/60 text-muted-foreground hover:text-foreground",
+            {/* Thẻ hiển thị người dùng đã chọn */}
+            {selectedUser ? (
+              <div className="flex items-center justify-between p-3 rounded-xl border border-primary/40 bg-primary/5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar size="sm" className="size-10 border border-border">
+                    {selectedUser.avatar && (
+                      <AvatarImage
+                        src={selectedUser.avatar}
+                        alt={selectedUser.fullName || selectedUser.username}
+                      />
+                    )}
+                    <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+                      {getInitials(
+                        selectedUser.fullName || selectedUser.username,
                       )}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Avatar size="sm" className="size-7 border border-border">
-                          {user.avatar && (
-                            <AvatarImage
-                              src={user.avatar}
-                              alt={user.fullName || user.username}
-                            />
-                          )}
-                          <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                            {getInitials(user.fullName || user.username)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-foreground truncate">
-                            {user.fullName || user.username}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground truncate">
-                            @{user.username} {user.email ? `• ${user.email}` : ""}
-                          </span>
-                        </div>
-                      </div>
-                      {isSelected && (
-                        <Check className="size-4 text-primary shrink-0 mr-1" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-semibold text-foreground truncate">
+                      {selectedUser.fullName || selectedUser.username}
+                    </span>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>@{selectedUser.username}</span>
+                      {selectedUser.email && (
+                        <>
+                          <span>•</span>
+                          <span className="truncate">{selectedUser.email}</span>
+                        </>
                       )}
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setSelectedUser(null);
+                    setForm((prev) => ({ ...prev, userId: undefined }));
+                    setUserSearch("");
+                    setDebouncedSearch("");
+                    setIsDropdownOpen(false);
+                  }}
+                >
+                  <X className="size-3.5 mr-1" /> Thay đổi
+                </Button>
+              </div>
+            ) : (
+              /* Ô input tìm kiếm người dùng với Dropdown Autocomplete */
+              <div ref={dropdownRef} className="relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => {
+                      setUserSearch(e.target.value);
+                      setIsDropdownOpen(true);
+                    }}
+                    onFocus={() => {
+                      if (userSearch.trim()) {
+                        setIsDropdownOpen(true);
+                      }
+                    }}
+                    placeholder="Nhập tên hoặc email để tìm kiếm người dùng..."
+                    className="w-full rounded-lg border border-input bg-transparent pl-9 pr-9 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  {isSearching ? (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-primary animate-spin" />
+                  ) : userSearch ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserSearch("");
+                        setDebouncedSearch("");
+                        setIsDropdownOpen(false);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  ) : null}
+                </div>
+
+                {/* Dropdown kết quả tìm kiếm */}
+                {isDropdownOpen && userSearch.trim().length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 z-50 rounded-xl border border-border/80 bg-popover text-popover-foreground shadow-xl overflow-hidden">
+                    {isSearching ? (
+                      <div className="flex items-center justify-center gap-2 p-5 text-xs text-muted-foreground">
+                        <Loader2 className="size-4 animate-spin text-primary" />
+                        <span>Đang tìm kiếm người dùng...</span>
+                      </div>
+                    ) : searchResults.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center p-5 text-center text-xs text-muted-foreground">
+                        <Users className="size-6 text-muted-foreground/40 mb-1" />
+                        <span>
+                          Không tìm thấy người dùng phù hợp với &quot;
+                          {debouncedSearch}&quot;.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="max-h-56 overflow-y-auto p-1.5 space-y-1">
+                        <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground border-b border-border/50 mb-1">
+                          Tìm thấy {searchResults.length} người dùng
+                        </div>
+                        {searchResults.map((user) => (
+                          <div
+                            key={user.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setForm((prev) => ({ ...prev, userId: user.id }));
+                              setIsDropdownOpen(false);
+                              setUserSearch("");
+                              setDebouncedSearch("");
+                              if (errors.userId) {
+                                setErrors((prev) => {
+                                  const next = { ...prev };
+                                  delete next.userId;
+                                  return next;
+                                });
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                setSelectedUser(user);
+                                setForm((prev) => ({
+                                  ...prev,
+                                  userId: user.id,
+                                }));
+                                setIsDropdownOpen(false);
+                                setUserSearch("");
+                                setDebouncedSearch("");
+                              }
+                            }}
+                            className="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors text-xs select-none hover:bg-muted/70 text-muted-foreground hover:text-foreground"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Avatar
+                                size="sm"
+                                className="size-8 border border-border"
+                              >
+                                {user.avatar && (
+                                  <AvatarImage
+                                    src={user.avatar}
+                                    alt={user.fullName || user.username}
+                                  />
+                                )}
+                                <AvatarFallback className="text-[11px] bg-primary/10 text-primary">
+                                  {getInitials(user.fullName || user.username)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-semibold text-foreground truncate">
+                                  {user.fullName || user.username}
+                                </span>
+                                <span className="text-[11px] text-muted-foreground truncate">
+                                  @{user.username}{' '}
+                                  {user.email ? `• ${user.email}` : ''}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[11px] text-primary font-medium shrink-0 ml-2">
+                              Chọn
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

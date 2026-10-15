@@ -9,6 +9,7 @@ import {
 import { SoftDeleteEntity } from '../../../infrastructure/database/entites/soft-delete.entity.js';
 import { User } from '../../users/entities/users.entity.js';
 import { WorkspaceMember } from './workspace-member.entity.js';
+import { MasterData } from '../../admin/entites/index.js';
 
 @Entity('workspaces')
 export class Workspace extends SoftDeleteEntity {
@@ -24,8 +25,8 @@ export class Workspace extends SoftDeleteEntity {
   @Column({ name: 'owner_id', type: 'int', nullable: false })
   ownerId: number;
 
-  @Column({ type: 'enum', enum: ['public', 'private'], default: 'private' })
-  mode: 'public' | 'private';
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  mode: string | null;
 
   @Column({ name: 'display_order', default: 1, nullable: true })
   displayOrder: number;
@@ -39,4 +40,8 @@ export class Workspace extends SoftDeleteEntity {
 
   @OneToMany(() => WorkspaceMember, (member) => member.workspace)
   members: Relation<WorkspaceMember>[];
+
+  modeName?: string | null;
+
+  modeData?: Relation<MasterData> | null;
 }

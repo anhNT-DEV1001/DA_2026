@@ -158,6 +158,32 @@ export const workspaceService = {
       `/workspaces/${workspaceId}/members/${userId}`,
     );
   },
+
+  /**
+   * Duyệt thành viên vào workspace (chỉ dành cho Owner)
+   * PATCH /workspaces/:id/members/:userId/approve
+   */
+  approveMember: async (
+    workspaceId: number,
+    userId: number,
+  ): Promise<WorkspaceMemberItem> => {
+    return apiClient.patch<unknown, WorkspaceMemberItem>(
+      `/workspaces/${workspaceId}/members/${userId}/approve`,
+    );
+  },
+
+  /**
+   * Từ chối yêu cầu tham gia workspace của thành viên (chỉ dành cho Owner)
+   * PATCH /workspaces/:id/members/:userId/reject
+   */
+  rejectMember: async (
+    workspaceId: number,
+    userId: number,
+  ): Promise<{ message: string }> => {
+    return apiClient.patch<unknown, { message: string }>(
+      `/workspaces/${workspaceId}/members/${userId}/reject`,
+    );
+  },
 };
 
 /**
@@ -169,4 +195,6 @@ export const workspaceMemberService = {
   addMember: workspaceService.addMember,
   updateMember: workspaceService.updateMember,
   removeMember: workspaceService.removeMember,
+  approveMember: workspaceService.approveMember,
+  rejectMember: workspaceService.rejectMember,
 };

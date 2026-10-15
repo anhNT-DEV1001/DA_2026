@@ -10,8 +10,16 @@ import {
 } from "@/features/workspaces";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LayoutGrid, List, Plus, RefreshCw, Search } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  Plus,
+  RefreshCw,
+  Search,
+  UserPlus,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMasterDataByGroup } from "@/features/masterdata/hooks";
 import { cn } from "@/lib/utils";
 
 export default function WorkspacePage() {
@@ -25,9 +33,10 @@ export default function WorkspacePage() {
   // Search & filter states
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [modeFilter, setModeFilter] = React.useState<
-    "all" | "public" | "private"
-  >("all");
+  const [modeFilter, setModeFilter] = React.useState<string>("all");
+
+  // Danh sách mode từ master data nhóm WSM
+  const { data: wsmItems = [] } = useMasterDataByGroup("WSM");
 
   // Debounce search
   React.useEffect(() => {
@@ -48,6 +57,11 @@ export default function WorkspacePage() {
   const handleCreate = () => {
     setSelectedWorkspace(null);
     setModalOpen(true);
+  };
+
+  const handleJoinWorkspace = () => {
+    // Logic to join a workspace (e.g., open a modal or navigate to a join page)
+    console.log("Join workspace clicked");
   };
 
   const handleEdit = (workspace: WorkspaceItem) => {
@@ -99,6 +113,16 @@ export default function WorkspacePage() {
             <Plus className="size-3.5" />
             Tạo Workspace
           </Button>
+
+          <Button
+            size="sm"
+            // variant="outline"
+            className="gap-1.5 text-xs font-medium bg-green-600 text-white hover:bg-green-700"
+            onClick={handleJoinWorkspace}
+          >
+            <UserPlus className="size-3.5" />
+            Tham gia
+          </Button>
         </div>
       </div>
 
@@ -118,15 +142,16 @@ export default function WorkspacePage() {
 
           <select
             value={modeFilter}
-            onChange={(e) =>
-              setModeFilter(e.target.value as "all" | "public" | "private")
-            }
+            onChange={(e) => setModeFilter(e.target.value)}
             aria-label="Lọc theo chế độ"
             className="h-9 rounded-md border border-input bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
           >
             <option value="all">Tất cả chế độ</option>
-            <option value="public">Công khai (Public)</option>
-            <option value="private">Riêng tư (Private)</option>
+            {wsmItems.map((item) => (
+              <option key={item.id} value={item.value || ""}>
+                {item.name || item.value}
+              </option>
+            ))}
           </select>
         </div>
 
