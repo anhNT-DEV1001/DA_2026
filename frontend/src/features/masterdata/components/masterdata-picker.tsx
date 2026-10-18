@@ -83,8 +83,11 @@ export function MasterDataPicker({
     if (selectedItem) {
       return selectedItem.name || selectedItem.value || value;
     }
+    if ((!value || value === "all") && allOptionLabel) {
+      return allOptionLabel;
+    }
     return value || placeholder;
-  }, [isLoading, selectedItem, value, placeholder]);
+  }, [isLoading, selectedItem, value, allOptionLabel, placeholder]);
 
   // Lọc các items theo từ khóa tìm kiếm
   const filteredItems = React.useMemo(() => {

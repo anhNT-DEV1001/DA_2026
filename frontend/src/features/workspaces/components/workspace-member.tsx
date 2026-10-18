@@ -34,6 +34,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 
 export interface WorkspaceMemberProps {
@@ -74,6 +75,26 @@ export function WorkspaceMember({
   className,
 }: WorkspaceMemberProps) {
   const queryClient = useQueryClient();
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const canCreate = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_CREATE"),
+    [permissions],
+  );
+  const canUpdate = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_UPDATE"),
+    [permissions],
+  );
+  const canDelete = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_DELETE"),
+    [permissions],
+  );
+  const canApprove = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_APPROVE"),
+    [permissions],
+  );
+  const showActionsColumn =
+    canManage && (canUpdate || canDelete || canApprove);
 
   // Pagination states
   const [page, setPage] = React.useState(1);
@@ -255,8 +276,8 @@ export function WorkspaceMember({
   };
 
   // Cấu hình các cột hiển thị trong DataTable
-  const columns = React.useMemo<ColumnDef<WorkspaceMemberItem>[]>(
-    () => [
+  const columns = React.useMemo<ColumnDef<WorkspaceMemberItem>[]>(() => {
+    const baseColumns: ColumnDef<WorkspaceMemberItem>[] = [
       {
         id: "index",
         header: "#",
@@ -408,7 +429,10 @@ export function WorkspaceMember({
           </div>
         ),
       },
-      {
+    ];
+
+    if (showActionsColumn) {
+      baseColumns.push({
         id: "actions",
         header: "Thao tác",
         align: "right",
@@ -420,7 +444,7 @@ export function WorkspaceMember({
 
           return (
             <div className="flex items-center justify-end gap-1">
-              {isPending && (
+              {canApprove && isPending && (
                 <>
                   <Button
                     variant="ghost"
@@ -444,32 +468,48 @@ export function WorkspaceMember({
                   </Button>
                 </>
               )}
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="size-7 hover:bg-muted text-muted-foreground hover:text-foreground"
-                onClick={() => handleEditMember(row)}
-                title="Thay đổi vai trò / trạng thái"
-              >
-                <Pencil className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                onClick={() => handleDeleteMember(row)}
-                title="Xóa khỏi workspace"
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
+              {canUpdate && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-7 hover:bg-muted text-muted-foreground hover:text-foreground"
+                  onClick={() => handleEditMember(row)}
+                  title="Thay đổi vai trò / trạng thái"
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                  onClick={() => handleDeleteMember(row)}
+                  title="Xóa khỏi workspace"
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              )}
             </div>
           );
         },
-      },
-    ],
+      });
+    }
+
+    return baseColumns;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, pageSize, canManage, isApproving, isRejecting, msMap],
-  );
+  }, [
+    page,
+    pageSize,
+    canManage,
+    canUpdate,
+    canDelete,
+    canApprove,
+    showActionsColumn,
+    isApproving,
+    isRejecting,
+    msMap,
+  ]);
 
   return (
     <div className={cn("space-y-4 w-full", className)}>
@@ -518,7 +558,7 @@ export function WorkspaceMember({
             Làm mới
           </Button>
 
-          {canManage && (
+          {canManage && canCreate && (
             <Button
               size="sm"
               onClick={handleAddMember}

@@ -15,7 +15,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { CurrentUser } from '../../common/decorators/index.js';
+import { CurrentUser, HasPermission } from '../../common/decorators/index.js';
 import { UserResponse } from '../users/dtos/index.js';
 import {
   AddWorkspaceMemberDto,
@@ -47,6 +47,7 @@ export class WorkspacesController {
   }
 
   @Get()
+  @HasPermission('WORKSPACE_VIEW')
   @ApiOperation({
     summary: 'Lấy danh sách workspace (có tìm kiếm & phân trang)',
   })
@@ -58,6 +59,7 @@ export class WorkspacesController {
   }
 
   @Get('slug/:slug')
+  @HasPermission('WORKSPACE_VIEW')
   @ApiOperation({ summary: 'Lấy chi tiết workspace theo slug' })
   @ApiParam({ name: 'slug', example: 'workspace-da-2026', type: String })
   async getBySlug(
@@ -68,6 +70,7 @@ export class WorkspacesController {
   }
 
   @Get(':id')
+  @HasPermission('WORKSPACE_VIEW')
   @ApiOperation({ summary: 'Lấy chi tiết workspace theo ID' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async getById(
@@ -78,6 +81,7 @@ export class WorkspacesController {
   }
 
   @Post()
+  @HasPermission('WORKSPACE_CREATE')
   @ApiOperation({ summary: 'Tạo mới một workspace' })
   async create(
     @Body() dto: CreateWorkspaceDto,
@@ -87,6 +91,7 @@ export class WorkspacesController {
   }
 
   @Patch(':id')
+  @HasPermission('WORKSPACE_UPDATE')
   @ApiOperation({ summary: 'Cập nhật workspace' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async update(
@@ -98,6 +103,7 @@ export class WorkspacesController {
   }
 
   @Delete(':id')
+  @HasPermission('WORKSPACE_DELETE')
   @ApiOperation({ summary: 'Xóa mềm workspace' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async remove(
@@ -112,6 +118,7 @@ export class WorkspacesController {
   /* ========================================================================= */
 
   @Get(':id/members')
+  @HasPermission('WORKSPACE_VIEW')
   @ApiOperation({
     summary:
       'Lấy danh sách thành viên trong workspace (phân trang, lọc theo vai trò/trạng thái, join role & user)',
@@ -130,6 +137,7 @@ export class WorkspacesController {
   }
 
   @Get(':id/members/:userId')
+  @HasPermission('WORKSPACE_VIEW')
   @ApiOperation({
     summary: 'Lấy thông tin chi tiết một thành viên trong workspace',
   })
@@ -153,6 +161,7 @@ export class WorkspacesController {
   }
 
   @Post(':id/members')
+  @HasPermission('WORKSPACE_CREATE')
   @ApiOperation({ summary: 'Thêm thành viên mới vào workspace' })
   @ApiParam({
     name: 'id',
@@ -169,6 +178,7 @@ export class WorkspacesController {
   }
 
   @Patch(':id/members/:userId')
+  @HasPermission('WORKSPACE_UPDATE')
   @ApiOperation({
     summary:
       'Cập nhật vai trò (role) hoặc trạng thái của thành viên trong workspace',
@@ -195,6 +205,7 @@ export class WorkspacesController {
   }
 
   @Patch(':id/members/:userId/approve')
+  @HasPermission('WORKSPACE_APPROVE')
   @ApiOperation({ summary: 'Chủ sở hữu duyệt thành viên vào workspace' })
   @ApiParam({
     name: 'id',
@@ -217,6 +228,7 @@ export class WorkspacesController {
   }
 
   @Patch(':id/members/:userId/reject')
+  @HasPermission('WORKSPACE_APPROVE')
   @ApiOperation({ summary: 'Chủ sở hữu từ chối yêu cầu tham gia workspace' })
   @ApiParam({
     name: 'id',
@@ -239,6 +251,7 @@ export class WorkspacesController {
   }
 
   @Delete(':id/members/:userId')
+  @HasPermission('WORKSPACE_DELETE')
   @ApiOperation({ summary: 'Xóa thành viên khỏi workspace' })
   @ApiParam({
     name: 'id',

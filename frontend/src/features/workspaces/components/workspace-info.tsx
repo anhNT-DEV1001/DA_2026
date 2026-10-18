@@ -18,6 +18,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 
 export interface WorkspaceInfoProps {
   workspace: WorkspaceItem;
@@ -51,9 +52,15 @@ function getInitials(name?: string | null): string {
 
 export function WorkspaceInfo({
   workspace,
-  canEdit = true,
+  canEdit,
   className,
 }: WorkspaceInfoProps) {
+  const permissions = useAuthStore((s) => s.permissions);
+  const hasUpdatePermission = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_UPDATE"),
+    [permissions],
+  );
+  const allowEdit = canEdit ?? hasUpdatePermission;
   const [editModalOpen, setEditModalOpen] = React.useState(false);
   const modeLabel =
     workspace.modeName || workspace.modeData?.name || workspace.mode;
@@ -123,7 +130,7 @@ export function WorkspaceInfo({
               </div>
             </div>
 
-            {canEdit && (
+            {allowEdit && (
               <Button
                 variant="outline"
                 size="sm"

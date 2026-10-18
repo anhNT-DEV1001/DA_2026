@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
+import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspace, useWorkspaceList } from "../hooks";
 import type { WorkspaceItem, WorkspaceQueryParams } from "../types";
 import { WorkspaceDetailModal } from "./workspace-detail";
@@ -78,6 +79,17 @@ export function WorkspaceTable({
   className,
 }: WorkspaceTableProps) {
   const router = useRouter();
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const canUpdate = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_UPDATE"),
+    [permissions],
+  );
+
+  const canDelete = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_DELETE"),
+    [permissions],
+  );
 
   // Quản lý pagination nội bộ khi component không nhận props từ ngoài
   const [internalPage, setInternalPage] = React.useState(1);
@@ -424,30 +436,43 @@ export function WorkspaceTable({
             >
               <ExternalLink className="size-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="size-7 hover:bg-muted text-muted-foreground hover:text-foreground"
-              onClick={(e) => handleEditClick(e, row)}
-              title="Chỉnh sửa workspace"
-            >
-              <Pencil className="size-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-              onClick={(e) => handleDeleteClick(e, row)}
-              title="Xóa workspace"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
+            {canUpdate && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="size-7 hover:bg-muted text-muted-foreground hover:text-foreground"
+                onClick={(e) => handleEditClick(e, row)}
+                title="Chỉnh sửa workspace"
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                onClick={(e) => handleDeleteClick(e, row)}
+                title="Xóa workspace"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            )}
           </div>
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, pageSize, starTogglingId, onEdit, onDelete, onSelect],
+    [
+      page,
+      pageSize,
+      starTogglingId,
+      onEdit,
+      onDelete,
+      onSelect,
+      canUpdate,
+      canDelete,
+    ],
   );
 
   return (

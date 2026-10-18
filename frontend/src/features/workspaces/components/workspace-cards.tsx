@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspace, useWorkspaceList } from "../hooks";
 import type { WorkspaceItem, WorkspaceQueryParams } from "../types";
 import { WorkspaceDetailModal } from "./workspace-detail";
@@ -83,6 +84,17 @@ export function WorkspaceCards({
   className,
 }: WorkspaceCardsProps) {
   const router = useRouter();
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const canUpdate = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_UPDATE"),
+    [permissions],
+  );
+
+  const canDelete = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_DELETE"),
+    [permissions],
+  );
 
   // Quản lý pagination nội bộ khi component không nhận props từ ngoài
   const [internalPage, setInternalPage] = React.useState(1);
@@ -442,26 +454,32 @@ export function WorkspaceCards({
                       <ArrowRight className="size-3" />
                     </span>
 
-                    <div className="flex items-center gap-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        className="size-7 hover:bg-muted text-muted-foreground hover:text-foreground"
-                        onClick={(e) => handleEditClick(e, workspace)}
-                        title="Chỉnh sửa workspace"
-                      >
-                        <Pencil className="size-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => handleDeleteClick(e, workspace)}
-                        title="Xóa workspace"
-                      >
-                        <Trash2 className="size-3" />
-                      </Button>
-                    </div>
+                    {(canUpdate || canDelete) && (
+                      <div className="flex items-center gap-0.5">
+                        {canUpdate && (
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="size-7 hover:bg-muted text-muted-foreground hover:text-foreground"
+                            onClick={(e) => handleEditClick(e, workspace)}
+                            title="Chỉnh sửa workspace"
+                          >
+                            <Pencil className="size-3" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                            onClick={(e) => handleDeleteClick(e, workspace)}
+                            title="Xóa workspace"
+                          >
+                            <Trash2 className="size-3" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>

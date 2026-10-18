@@ -22,6 +22,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 
 type TabKey = "info" | "members";
 
@@ -30,6 +31,11 @@ export default function WorkspaceDetailPage() {
   const searchParams = useSearchParams();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ? decodeURIComponent(params.slug) : "";
+  const permissions = useAuthStore((s) => s.permissions);
+  const canUpdate = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_UPDATE"),
+    [permissions],
+  );
 
   // Lấy tab từ URL query param nếu có (ví dụ ?tab=members), mặc định là 'info'
   const tabFromUrl = searchParams.get("tab") as TabKey | null;
@@ -258,7 +264,7 @@ export default function WorkspaceDetailPage() {
       <div className="w-full">
         {activeTab === "info" ? (
           /* Tab 1: Hiển thị thông tin Workspace */
-          <WorkspaceInfo workspace={workspace} />
+          <WorkspaceInfo workspace={workspace} canEdit={canUpdate} />
         ) : (
           /* Tab 2: Quản lý thành viên trong Workspace theo Workspace ID */
           <WorkspaceMember

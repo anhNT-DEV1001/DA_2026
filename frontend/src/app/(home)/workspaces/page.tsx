@@ -19,11 +19,17 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMasterDataByGroup } from "@/features/masterdata/hooks";
+import { MasterDataPicker } from "@/features/masterdata/components/masterdata-picker";
+import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 
 export default function WorkspacePage() {
   const queryClient = useQueryClient();
+  const permissions = useAuthStore((s) => s.permissions);
+  const canCreate = React.useMemo(
+    () => permissions.some((p) => p.code === "WORKSPACE_CREATE"),
+    [permissions],
+  );
   const [viewMode, setViewMode] = React.useState<"cards" | "table">("cards");
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -33,10 +39,7 @@ export default function WorkspacePage() {
   // Search & filter states
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [modeFilter, setModeFilter] = React.useState<string>("all");
-
-  // Danh sách mode từ master data nhóm WSM
-  const { data: wsmItems = [] } = useMasterDataByGroup("WSM");
+  const [modeFilter, setModeFilter] = React.useState<string>("");
 
   // Debounce search
   React.useEffect(() => {
@@ -72,7 +75,7 @@ export default function WorkspacePage() {
   const queryParams = React.useMemo(() => {
     return {
       search: debouncedSearch || undefined,
-      mode: modeFilter === "all" ? undefined : modeFilter,
+      mode: !modeFilter || modeFilter === "all" ? undefined : modeFilter,
     };
   }, [debouncedSearch, modeFilter]);
 
@@ -105,14 +108,16 @@ export default function WorkspacePage() {
             Làm mới
           </Button>
 
-          <Button
-            size="sm"
-            className="gap-1.5 text-xs font-medium"
-            onClick={handleCreate}
-          >
-            <Plus className="size-3.5" />
-            Tạo Workspace
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="gap-1.5 text-xs font-medium"
+              onClick={handleCreate}
+            >
+              <Plus className="size-3.5" />
+              Tạo Workspace
+            </Button>
+          )}
 
           <Button
             size="sm"
@@ -140,19 +145,15 @@ export default function WorkspacePage() {
             />
           </div>
 
-          <select
+          <MasterDataPicker
+            group="WSM"
             value={modeFilter}
-            onChange={(e) => setModeFilter(e.target.value)}
-            aria-label="Lọc theo chế độ"
-            className="h-9 rounded-md border border-input bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
-          >
-            <option value="all">Tất cả chế độ</option>
-            {wsmItems.map((item) => (
-              <option key={item.id} value={item.value || ""}>
-                {item.name || item.value}
-              </option>
-            ))}
-          </select>
+            onValueChange={setModeFilter}
+            placeholder="Tất cả chế độ"
+            allOptionLabel="Tất cả chế độ"
+            allowClear
+            triggerClassName="w-40 sm:w-44 h-9 shrink-0"
+          />
         </div>
 
         {/* View Mode Toggle (Cards / Table) */}
@@ -195,14 +196,16 @@ export default function WorkspacePage() {
             queryParams={queryParams}
             onEdit={handleEdit}
             emptyAction={
-              <Button
-                size="sm"
-                onClick={handleCreate}
-                className="gap-1.5 text-xs"
-              >
-                <Plus className="size-3.5" />
-                Tạo workspace đầu tiên
-              </Button>
+              canCreate ? (
+                <Button
+                  size="sm"
+                  onClick={handleCreate}
+                  className="gap-1.5 text-xs"
+                >
+                  <Plus className="size-3.5" />
+                  Tạo workspace đầu tiên
+                </Button>
+              ) : undefined
             }
           />
         ) : (
