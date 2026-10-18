@@ -7,9 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Plus, RefreshCw, Search, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { USER_QUERY_KEYS } from "@/features/users/hooks";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
+  const permissions = useAuthStore((s) => s.permissions);
+  const canCreate = React.useMemo(
+    () => permissions.some((p) => p.code === "USERS_CREATE"),
+    [permissions],
+  );
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<UserItem | null>(null);
@@ -70,14 +76,16 @@ export default function UsersPage() {
             Làm mới
           </Button>
 
-          <Button
-            size="sm"
-            className="gap-1.5 text-xs font-medium"
-            onClick={handleCreate}
-          >
-            <Plus className="size-3.5" />
-            Thêm người dùng
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="gap-1.5 text-xs font-medium"
+              onClick={handleCreate}
+            >
+              <Plus className="size-3.5" />
+              Thêm người dùng
+            </Button>
+          )}
         </div>
       </div>
 

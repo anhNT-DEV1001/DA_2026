@@ -22,8 +22,8 @@ export class WorkspaceMember extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user: Relation<User>;
 
-  @Column({ name: 'role_id', type: 'int', nullable: false })
-  roleId: number;
+  @Column({ name: 'role_id', type: 'int', nullable: true })
+  roleId: number | null;
 
   @ManyToOne(() => Role, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'role_id' })

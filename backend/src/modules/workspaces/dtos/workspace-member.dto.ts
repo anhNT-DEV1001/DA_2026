@@ -1,6 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { PaginanteRequest } from '../../../common/requests/index.js';
 
 export class WorkspaceMemberRequest extends PaginanteRequest {
@@ -46,11 +53,12 @@ export class AddWorkspaceMemberDto {
     example: 2,
     description: 'ID vai trò gán cho người dùng trong workspace',
   })
+  @IsOptional()
+  @ValidateIf((o) => o.roleId !== null && o.roleId !== undefined)
   @Type(() => Number)
   @IsInt({ message: 'Role ID phải là số nguyên.' })
-  @IsNotEmpty({ message: 'Role ID không được để trống.' })
   @Min(1, { message: 'Role ID phải lớn hơn 0.' })
-  roleId: number;
+  roleId?: number | null;
 
   @ApiPropertyOptional({
     example: 'active',
@@ -68,10 +76,11 @@ export class UpdateWorkspaceMemberDto {
     description: 'ID vai trò mới',
   })
   @IsOptional()
+  @ValidateIf((o) => o.roleId !== null && o.roleId !== undefined)
   @Type(() => Number)
   @IsInt({ message: 'Role ID phải là số nguyên.' })
   @Min(1, { message: 'Role ID phải lớn hơn 0.' })
-  roleId?: number;
+  roleId?: number | null;
 
   @ApiPropertyOptional({
     example: 'inactive',

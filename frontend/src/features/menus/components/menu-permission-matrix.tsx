@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { useMasterDataByGroup } from "@/features/masterdata";
+import { useAuthStore } from "@/stores/auth-store";
 import type { MenuItem } from "../types";
 import {
   ShieldCheck,
@@ -242,6 +243,7 @@ export function MenuPermissionMatrix({
     try {
       const idsArray = Array.from(selectedIds);
       await updateRolePermissions(idsArray);
+      await useAuthStore.getState().fetchMe();
       toast.add({
         title: "Cập nhật thành công",
         description: `Đã lưu cấu hình phân quyền cho vai trò "${roleName || roleId}".`,

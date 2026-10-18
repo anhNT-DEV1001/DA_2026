@@ -20,6 +20,7 @@ interface AuthState {
   logout: () => Promise<void>;
   hasRole: (roleName: string) => boolean;
   hasPermission: (permissionCode: string) => boolean;
+  hasMenuPermission: (menuId: number, action?: string) => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -84,6 +85,15 @@ export const useAuthStore = create<AuthState>()(
 
       hasPermission: (permissionCode: string) => {
         return get().permissions.some((p) => p.code === permissionCode);
+      },
+
+      hasMenuPermission: (menuId: number, action = "ACTION001") => {
+        const targetAction = action.toUpperCase();
+        return get().permissions.some(
+          (p) =>
+            Number(p.menuId) === Number(menuId) &&
+            p.action?.toUpperCase() === targetAction,
+        );
       },
     }),
     {

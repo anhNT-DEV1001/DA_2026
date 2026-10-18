@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { useWorkspaceMember } from "../hooks";
 import { useUserSearch } from "@/features/users/hooks";
-import { useRoleList } from "@/features/roles/hooks";
+import { RolePicker } from "@/features/roles";
+import { MasterDataPicker } from "@/features/masterdata";
 import type { UserItem } from "@/features/users/types";
 import type {
   AddWorkspaceMemberDto,
@@ -17,18 +18,13 @@ import type {
   WorkspaceMemberItem,
 } from "../types";
 import {
-  Check,
-  CheckCircle2,
-  Clock,
   Loader2,
   Pencil,
   Search,
   Shield,
-  User,
   UserPlus,
   Users,
   X,
-  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,36 +40,9 @@ export interface WorkspaceMemberDetailProps {
 
 interface FormState {
   userId?: number;
-  roleId?: number;
+  roleId?: number | null;
   status: string;
 }
-
-const STATUS_OPTIONS = [
-  {
-    value: "MS001",
-    label: "Hoạt động (Active)",
-    icon: CheckCircle2,
-    color: "text-emerald-500",
-  },
-  {
-    value: "MS002",
-    label: "Chờ xác nhận (Pending)",
-    icon: Clock,
-    color: "text-amber-500",
-  },
-  {
-    value: "MS003",
-    label: "Bị từ chối (Rejected)",
-    icon: XCircle,
-    color: "text-rose-500",
-  },
-  {
-    value: "inactive",
-    label: "Tạm ngưng (Inactive)",
-    icon: XCircle,
-    color: "text-slate-400",
-  },
-];
 
 function getInitials(name?: string | null): string {
   if (!name) return "U";
@@ -93,25 +62,16 @@ export function WorkspaceMemberDetailModal({
 }: WorkspaceMemberDetailProps) {
   const isEdit = Boolean(member);
 
-  const { addMember, updateMember, isAdding, isUpdating } =
-    useWorkspaceMember(workspaceId, member?.userId);
+  const { addMember, updateMember, isAdding, isUpdating } = useWorkspaceMember(
+    workspaceId,
+    member?.userId,
+  );
 
   const isSubmitting = isAdding || isUpdating;
 
-  // Lấy danh sách Roles để gán quyền
-  const { data: rolesData, isLoading: isLoadingRoles } = useRoleList({
-    limit: 100,
-  });
-
-  const availableRoles = React.useMemo(() => {
-    if (!rolesData) return [];
-    if (Array.isArray(rolesData)) return rolesData;
-    return rolesData.items || [];
-  }, [rolesData]);
-
   const [form, setForm] = React.useState<FormState>({
     userId: undefined,
-    roleId: undefined,
+    roleId: null,
     status: "MS001",
   });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -168,14 +128,14 @@ export function WorkspaceMemberDetailModal({
       if (currentStatus === "pending") currentStatus = "MS002";
       setForm({
         userId: member.userId,
-        roleId: member.roleId,
+        roleId: member.roleId ?? null,
         status: currentStatus,
       });
       setSelectedUser(null);
     } else {
       setForm({
         userId: undefined,
-        roleId: undefined,
+        roleId: null,
         status: "MS001",
       });
       setUserSearch("");
@@ -193,10 +153,6 @@ export function WorkspaceMemberDetailModal({
       newErrors.userId = "Vui lòng chọn người dùng cần thêm vào workspace.";
     }
 
-    if (!form.roleId) {
-      newErrors.roleId = "Vui lòng chọn vai trò cho thành viên.";
-    }
-
     if (!form.status) {
       newErrors.status = "Vui lòng chọn trạng thái.";
     }
@@ -212,7 +168,7 @@ export function WorkspaceMemberDetailModal({
     try {
       if (isEdit && member) {
         const dto: UpdateWorkspaceMemberDto = {
-          roleId: form.roleId,
+          roleId: form.roleId !== undefined ? form.roleId : null,
           status: form.status,
         };
 
@@ -230,10 +186,10 @@ export function WorkspaceMemberDetailModal({
 
         onSuccess?.();
         onOpenChange?.(false);
-      } else if (form.userId && form.roleId) {
+      } else if (form.userId) {
         const dto: AddWorkspaceMemberDto = {
           userId: form.userId,
-          roleId: form.roleId,
+          roleId: form.roleId ?? null,
           status: form.status,
         };
 
@@ -259,7 +215,8 @@ export function WorkspaceMemberDetailModal({
       const apiMessage = err?.response?.data?.message || err?.message;
       const displayMessage = Array.isArray(apiMessage)
         ? apiMessage.join(", ")
-        : apiMessage || "Có lỗi xảy ra khi lưu thông tin thành viên. Vui lòng thử lại!";
+        : apiMessage ||
+          "Có lỗi xảy ra khi lưu thông tin thành viên. Vui lòng thử lại!";
 
       toast.add({
         title: isEdit ? "Cập nhật thất bại" : "Thêm thành viên thất bại",
@@ -491,8 +448,8 @@ export function WorkspaceMemberDetailModal({
                                   {user.fullName || user.username}
                                 </span>
                                 <span className="text-[11px] text-muted-foreground truncate">
-                                  @{user.username}{' '}
-                                  {user.email ? `• ${user.email}` : ''}
+                                  @{user.username}{" "}
+                                  {user.email ? `• ${user.email}` : ""}
                                 </span>
                               </div>
                             </div>
@@ -518,82 +475,30 @@ export function WorkspaceMemberDetailModal({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-xs font-semibold">
-              Vai trò trong Workspace <span className="text-destructive">*</span>
+              Vai trò trong Workspace
             </Label>
             <span className="text-[11px] text-muted-foreground flex items-center gap-1">
               <Shield className="size-3 text-primary" /> Phân quyền truy cập
             </span>
           </div>
 
-          {isLoadingRoles ? (
-            <div className="p-3 text-center text-xs text-muted-foreground">
-              Đang tải danh sách vai trò...
-            </div>
-          ) : availableRoles.length === 0 ? (
-            <div className="p-3 text-center text-xs text-muted-foreground italic rounded-lg border">
-              Chưa có vai trò nào trong hệ thống.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {availableRoles.map((role) => {
-                const isSelected = form.roleId === role.id;
-                return (
-                  <div
-                    key={role.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      setForm((prev) => ({ ...prev, roleId: role.id }));
-                      if (errors.roleId) {
-                        setErrors((prev) => {
-                          const next = { ...prev };
-                          delete next.roleId;
-                          return next;
-                        });
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        setForm((prev) => ({ ...prev, roleId: role.id }));
-                      }
-                    }}
-                    className={cn(
-                      "flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all text-xs select-none",
-                      isSelected
-                        ? "border-primary bg-primary/10 shadow-xs ring-1 ring-primary/30"
-                        : "border-border hover:bg-muted/40",
-                    )}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div
-                        className={cn(
-                          "size-7 rounded-md flex items-center justify-center shrink-0",
-                          isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        <Shield className="size-3.5" />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-semibold text-foreground truncate">
-                          {role.name}
-                        </span>
-                        {role.description && (
-                          <span className="text-[10px] text-muted-foreground truncate">
-                            {role.description}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <Check className="size-4 text-primary shrink-0" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <RolePicker
+            value={form.roleId}
+            onValueChange={(val) => {
+              setForm((prev) => ({ ...prev, roleId: val ?? null }));
+              if (errors.roleId) {
+                setErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.roleId;
+                  return next;
+                });
+              }
+            }}
+            placeholder="Chọn vai trò..."
+            nullOptionLabel="Chọn vai trò"
+            triggerClassName="h-9 w-full text-xs"
+            contentClassName="w-80"
+          />
 
           {errors.roleId && (
             <p className="text-[11px] text-destructive">{errors.roleId}</p>
@@ -605,30 +510,23 @@ export function WorkspaceMemberDetailModal({
           <Label className="text-xs font-semibold">
             Trạng thái hoạt động <span className="text-destructive">*</span>
           </Label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {STATUS_OPTIONS.map((item) => {
-              const Icon = item.icon;
-              const isSelected = form.status === item.value;
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() =>
-                    setForm((prev) => ({ ...prev, status: item.value }))
-                  }
-                  className={cn(
-                    "flex items-center gap-2 p-2 rounded-lg border text-xs font-medium transition-all select-none text-left",
-                    isSelected
-                      ? "border-primary bg-primary/10 ring-1 ring-primary/20 text-foreground"
-                      : "border-border hover:bg-muted/40 text-muted-foreground",
-                  )}
-                >
-                  <Icon className={cn("size-3.5 shrink-0", item.color)} />
-                  <span className="truncate">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <MasterDataPicker
+            group="MS"
+            value={form.status}
+            onValueChange={(val) => {
+              setForm((prev) => ({ ...prev, status: val }));
+              if (errors.status) {
+                setErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.status;
+                  return next;
+                });
+              }
+            }}
+            placeholder="Chọn trạng thái hoạt động..."
+            triggerClassName="h-9 w-full text-xs"
+            contentClassName="w-80"
+          />
           {errors.status && (
             <p className="text-[11px] text-destructive">{errors.status}</p>
           )}
@@ -640,4 +538,3 @@ export function WorkspaceMemberDetailModal({
 
 // Alias export
 export const WorkspaceMemberDetail = WorkspaceMemberDetailModal;
-

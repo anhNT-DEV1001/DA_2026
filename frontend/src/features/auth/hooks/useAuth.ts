@@ -20,6 +20,7 @@ export function useAuth() {
   const fetchMe = useAuthStore((s) => s.fetchMe);
   const hasRole = useAuthStore((s) => s.hasRole);
   const hasPermission = useAuthStore((s) => s.hasPermission);
+  const hasMenuPermission = useAuthStore((s) => s.hasMenuPermission);
 
   const loginMutation = useMutation({
     mutationFn: (dto: LoginDto) => authService.login(dto),
@@ -78,6 +79,7 @@ export function useAuth() {
     isInitialized,
     hasRole,
     hasPermission,
+    hasMenuPermission,
     fetchMe,
 
     // React Query Mutations

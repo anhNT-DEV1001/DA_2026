@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
 import { useRole, useRoleList } from "../hooks";
 import type { RoleItem, RoleQueryParams } from "../types";
+import { useAuthStore } from "@/stores/auth-store";
 import { Shield, Pencil, Trash2, Calendar, ShieldCheck } from "lucide-react";
 
 export interface RoleTableProps {
@@ -53,6 +54,26 @@ export function RoleTable({
   queryParams,
 }: RoleTableProps) {
   const router = useRouter();
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const canAccessControl = React.useMemo(
+    () => permissions.some((p) => p.code === "ROLEGROUP_ACCESS_CONTROL"),
+    [permissions],
+  );
+
+  const canEdit = React.useMemo(
+    () =>
+      Boolean(onEdit) &&
+      permissions.some((p) => p.code === "ROLEGROUP_UPDATE"),
+    [onEdit, permissions],
+  );
+
+  const canDelete = React.useMemo(
+    () => permissions.some((p) => p.code === "ROLEGROUP_DELETE"),
+    [permissions],
+  );
+
+  const showActionsColumn = canAccessControl || canEdit || canDelete;
 
   // Quản lý internal pagination nếu parent component không truyền vào
   const [internalPage, setInternalPage] = React.useState(1);
@@ -140,8 +161,8 @@ export function RoleTable({
   };
 
   // Định nghĩa các cột cho bảng vai trò
-  const columns = React.useMemo<ColumnDef<RoleItem>[]>(
-    () => [
+  const columns = React.useMemo<ColumnDef<RoleItem>[]>(() => {
+    const baseColumns: ColumnDef<RoleItem>[] = [
       {
         id: "index",
         header: "#",
@@ -197,28 +218,33 @@ export function RoleTable({
           </div>
         ),
       },
-      {
+    ];
+
+    if (showActionsColumn) {
+      baseColumns.push({
         id: "actions",
         header: "Thao tác",
         align: "right",
         width: 100,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="size-7 hover:bg-primary/10 text-muted-foreground hover:text-primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(
-                  `/roles/permissions?roleId=${row.id}&roleName=${encodeURIComponent(row.name)}`,
-                );
-              }}
-              title="Phân quyền thao tác"
-            >
-              <ShieldCheck className="size-3.5" />
-            </Button>
-            {onEdit && (
+            {canAccessControl && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="size-7 hover:bg-primary/10 text-muted-foreground hover:text-primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(
+                    `/roles/permissions?roleId=${row.id}&roleName=${encodeURIComponent(row.name)}`,
+                  );
+                }}
+                title="Phân quyền thao tác"
+              >
+                <ShieldCheck className="size-3.5" />
+              </Button>
+            )}
+            {canEdit && onEdit && (
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -232,24 +258,36 @@ export function RoleTable({
                 <Pencil className="size-3.5" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                setRoleToDelete(row);
-              }}
-              title="Xóa vai trò"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRoleToDelete(row);
+                }}
+                title="Xóa vai trò"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            )}
           </div>
         ),
-      },
-    ],
-    [page, pageSize, onEdit],
-  );
+      });
+    }
+
+    return baseColumns;
+  }, [
+    page,
+    pageSize,
+    canAccessControl,
+    canEdit,
+    canDelete,
+    showActionsColumn,
+    onEdit,
+    router,
+  ]);
 
   return (
     <>

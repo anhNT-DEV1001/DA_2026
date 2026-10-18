@@ -15,7 +15,10 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { CurrentUser } from '../../../common/decorators/index.js';
+import {
+  CurrentUser,
+  HasPermission,
+} from '../../../common/decorators/index.js';
 import { UserResponse } from '../../users/dtos/index.js';
 import {
   CreatePermissionDto,
@@ -31,12 +34,14 @@ export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
 
   @Get()
+  @HasPermission('ROLEGROUP_VIEW')
   @ApiOperation({ summary: 'Lấy danh sách thao tác (Permissions)' })
   async getListPermissions(@Query() query: PermissionRequest) {
     return this.permissionService.getListPermission(query);
   }
 
   @Get('menu/:menuId')
+  @HasPermission('ROLEGROUP_VIEW')
   @ApiOperation({ summary: 'Lấy danh sách thao tác theo Menu ID' })
   @ApiParam({ name: 'menuId', example: 1, type: Number })
   async getPermissionInMenu(@Param('menuId', ParseIntPipe) menuId: number) {
@@ -44,6 +49,7 @@ export class PermissionController {
   }
 
   @Get('matrix')
+  @HasPermission('ROLEGROUP_VIEW')
   @ApiOperation({
     summary:
       'Lấy ma trận cây Menu và các Permission tương ứng (dành cho phân quyền)',
@@ -53,6 +59,7 @@ export class PermissionController {
   }
 
   @Get(':id')
+  @HasPermission('ROLEGROUP_VIEW')
   @ApiOperation({ summary: 'Lấy thông tin chi tiết thao tác' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async getPermissionById(@Param('id', ParseIntPipe) id: number) {
@@ -60,6 +67,7 @@ export class PermissionController {
   }
 
   @Post()
+  @HasPermission('ROLEGROUP_CREATE')
   @ApiOperation({ summary: 'Tạo thao tác (Permission) mới' })
   async createPermission(
     @Body() dto: CreatePermissionDto,
@@ -69,6 +77,7 @@ export class PermissionController {
   }
 
   @Patch(':id')
+  @HasPermission('ROLEGROUP_UPDATE')
   @ApiOperation({ summary: 'Cập nhật thông tin thao tác (Permission)' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async updatePermission(
@@ -80,6 +89,7 @@ export class PermissionController {
   }
 
   @Delete(':id')
+  @HasPermission('ROLEGROUP_DELETE')
   @ApiOperation({ summary: 'Xóa thao tác (Permission)' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async removePermission(

@@ -6,9 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE_QUERY_KEYS } from "@/features/roles/hooks";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function RolesPage() {
   const queryClient = useQueryClient();
+  const permissions = useAuthStore((s) => s.permissions);
+  const canCreate = React.useMemo(
+    () => permissions.some((p) => p.code === "ROLEGROUP_CREATE"),
+    [permissions],
+  );
+
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [selectedRole, setSelectedRole] = React.useState<RoleItem | null>(null);
@@ -58,14 +65,16 @@ export default function RolesPage() {
             Làm mới
           </Button>
 
-          <Button
-            size="sm"
-            className="gap-1.5 text-xs font-medium"
-            onClick={handleCreate}
-          >
-            <Plus className="size-3.5" />
-            Thêm vai trò
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="gap-1.5 text-xs font-medium"
+              onClick={handleCreate}
+            >
+              <Plus className="size-3.5" />
+              Thêm vai trò
+            </Button>
+          )}
         </div>
       </div>
 

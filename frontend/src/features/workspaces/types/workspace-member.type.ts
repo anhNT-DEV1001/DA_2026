@@ -5,11 +5,11 @@ export interface WorkspaceMemberItem {
   id: number;
   workspaceId: number;
   userId: number;
-  roleId: number;
+  roleId: number | null;
   status: string;
   joinedAt?: string | null;
   user?: UserItem;
-  role?: RoleItem;
+  role?: RoleItem | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   createdBy?: number | null;
@@ -20,18 +20,18 @@ export type WorkspaceMemberType = WorkspaceMemberItem;
 
 export interface AddWorkspaceMemberDto {
   userId: number;
-  roleId: number;
+  roleId?: number | null;
   status?: string;
 }
 
 export interface UpdateWorkspaceMemberDto {
-  roleId?: number;
+  roleId?: number | null;
   status?: string;
 }
 
 export interface WorkspaceMemberQueryParams {
   search?: string;
-  roleId?: number;
+  roleId?: number | null;
   status?: string;
   page?: number;
   limit?: number;

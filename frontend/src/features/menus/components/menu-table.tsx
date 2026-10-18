@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/common/modal";
 import { toast } from "@/components/ui/toast";
 import { MenuPermissionButton } from "./menu-permission-detail";
+import { useAuthStore } from "@/stores/auth-store";
 import {
   Pencil,
   Trash2,
@@ -41,6 +42,22 @@ export function MenuTable({
   onEdit,
   onDelete,
 }: MenuTableProps) {
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const canEdit = React.useMemo(
+    () =>
+      Boolean(onEdit) &&
+      permissions.some((p) => p.code === "LISTMENUS_UPDATE"),
+    [onEdit, permissions],
+  );
+
+  const canDelete = React.useMemo(
+    () => permissions.some((p) => p.code === "LISTMENUS_DELETE"),
+    [permissions],
+  );
+
+  const showActionsColumn = canEdit || canDelete;
+
   // Quản lý internal pagination nếu parent không truyền vào
   const [internalPage, setInternalPage] = React.useState(1);
   const [internalPageSize, setInternalPageSize] = React.useState(10);
@@ -119,8 +136,8 @@ export function MenuTable({
   };
 
   // Định nghĩa các cột cho bảng Menu
-  const columns = React.useMemo<ColumnDef<MenuItem>[]>(
-    () => [
+  const columns = React.useMemo<ColumnDef<MenuItem>[]>(() => {
+    const baseColumns: ColumnDef<MenuItem>[] = [
       {
         id: "index",
         header: "#",
@@ -227,15 +244,18 @@ export function MenuTable({
           </span>
         ),
       },
-      {
+    ];
+
+    if (showActionsColumn) {
+      baseColumns.push({
         id: "actions",
         header: "Thao tác",
         align: "right",
         width: 100,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <MenuPermissionButton menu={row} />
-            {onEdit && (
+            {canEdit && <MenuPermissionButton menu={row} />}
+            {canEdit && onEdit && (
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -249,24 +269,27 @@ export function MenuTable({
                 <Pencil className="size-3.5" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuToDelete(row);
-              }}
-              title="Xóa menu"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuToDelete(row);
+                }}
+                title="Xóa menu"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            )}
           </div>
         ),
-      },
-    ],
-    [page, pageSize, onEdit],
-  );
+      });
+    }
+
+    return baseColumns;
+  }, [page, pageSize, canEdit, canDelete, showActionsColumn, onEdit]);
 
   return (
     <>

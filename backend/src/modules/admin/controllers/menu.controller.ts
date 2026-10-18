@@ -15,7 +15,10 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { CurrentUser } from '../../../common/decorators/index.js';
+import {
+  CurrentUser,
+  HasPermission,
+} from '../../../common/decorators/index.js';
 import { UserResponse } from '../../users/dtos/index.js';
 import { MenuDto, MenuRequest } from '../dtos/index.js';
 import { MenuService } from '../services/index.js';
@@ -33,12 +36,14 @@ export class MenuController {
   }
 
   @Get()
+  @HasPermission('LISTMENUS_VIEW')
   @ApiOperation({ summary: 'Lấy danh sách menu' })
   async getListMenus(@Query() query: MenuRequest) {
     return this.menuService.getListMenus(query);
   }
 
   @Get(':id')
+  @HasPermission('LISTMENUS_VIEW')
   @ApiOperation({ summary: 'Lấy thông tin menu' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async getMenuById(@Param('id', ParseIntPipe) id: number) {
@@ -46,6 +51,7 @@ export class MenuController {
   }
 
   @Post()
+  @HasPermission('LISTMENUS_CREATE')
   @ApiOperation({ summary: 'Tạo menu' })
   async createMenu(
     @Body() dto: MenuDto,
@@ -55,6 +61,7 @@ export class MenuController {
   }
 
   @Patch(':id')
+  @HasPermission('LISTMENUS_UPDATE')
   @ApiOperation({ summary: 'Cập nhật menu' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async updateMenu(
@@ -66,6 +73,7 @@ export class MenuController {
   }
 
   @Delete(':id')
+  @HasPermission('LISTMENUS_DELETE')
   @ApiOperation({ summary: 'Xóa menu' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async removeMenu(

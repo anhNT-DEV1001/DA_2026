@@ -6,6 +6,7 @@ import { Modal } from "@/components/common/modal";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/toast";
+import { useAuthStore } from "@/stores/auth-store";
 import { useUser, useUserList } from "../hooks";
 import type { UserItem, UserQueryParams } from "../types";
 import {
@@ -177,8 +178,22 @@ export function UserTable({
     }
   };
 
-  const columns = React.useMemo<ColumnDef<UserItem>[]>(
-    () => [
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const canEdit = React.useMemo(
+    () => permissions.some((p) => p.code === "USERS_UPDATE"),
+    [permissions],
+  );
+
+  const canDelete = React.useMemo(
+    () => permissions.some((p) => p.code === "USERS_DELETE"),
+    [permissions],
+  );
+
+  const showActionsColumn = (canEdit && Boolean(onEdit)) || canDelete;
+
+  const columns = React.useMemo<ColumnDef<UserItem>[]>(() => {
+    const baseColumns: ColumnDef<UserItem>[] = [
       {
         id: "index",
         header: "#",
@@ -328,14 +343,17 @@ export function UserTable({
           </div>
         ),
       },
-      {
+    ];
+
+    if (showActionsColumn) {
+      baseColumns.push({
         id: "actions",
         header: "Thao tác",
         align: "right",
         width: 90,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            {onEdit && (
+            {canEdit && onEdit && (
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -349,24 +367,27 @@ export function UserTable({
                 <Pencil className="size-3.5" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                setUserToDelete(row);
-              }}
-              title="Xóa người dùng"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="size-7 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setUserToDelete(row);
+                }}
+                title="Xóa người dùng"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            )}
           </div>
         ),
-      },
-    ],
-    [page, pageSize, onEdit],
-  );
+      });
+    }
+
+    return baseColumns;
+  }, [page, pageSize, onEdit, canEdit, canDelete, showActionsColumn]);
 
   return (
     <>

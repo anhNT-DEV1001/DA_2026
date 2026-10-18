@@ -5,6 +5,7 @@ import { Edit2, Trash2, Tag } from "lucide-react";
 import { DataTable, type ColumnDef } from "@/components/common/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/stores/auth-store";
 import type { MasterData } from "../types";
 
 export interface MasterDataTableProps {
@@ -30,8 +31,26 @@ export function MasterDataTable({
   onEdit,
   onDelete,
 }: MasterDataTableProps) {
-  const columns: ColumnDef<MasterData>[] = React.useMemo(
-    () => [
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const canEdit = React.useMemo(
+    () =>
+      Boolean(onEdit) &&
+      permissions.some((p) => p.code === "MASTERDATA_UPDATE"),
+    [onEdit, permissions],
+  );
+
+  const canDelete = React.useMemo(
+    () =>
+      Boolean(onDelete) &&
+      permissions.some((p) => p.code === "MASTERDATA_DELETE"),
+    [onDelete, permissions],
+  );
+
+  const showActionsColumn = canEdit || canDelete;
+
+  const columns: ColumnDef<MasterData>[] = React.useMemo(() => {
+    const baseColumns: ColumnDef<MasterData>[] = [
       {
         id: "stt",
         header: "STT",
@@ -103,14 +122,17 @@ export function MasterDataTable({
           </span>
         ),
       },
-      {
+    ];
+
+    if (showActionsColumn) {
+      baseColumns.push({
         id: "actions",
         header: "Thao tác",
         width: "100px",
         align: "center",
         cell: ({ row }) => (
           <div className="flex items-center justify-center gap-1">
-            {onEdit && (
+            {canEdit && onEdit && (
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -121,7 +143,7 @@ export function MasterDataTable({
                 <Edit2 className="size-3.5" />
               </Button>
             )}
-            {onDelete && (
+            {canDelete && onDelete && (
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -134,10 +156,11 @@ export function MasterDataTable({
             )}
           </div>
         ),
-      },
-    ],
-    [page, pageSize, onEdit, onDelete],
-  );
+      });
+    }
+
+    return baseColumns;
+  }, [page, pageSize, canEdit, canDelete, showActionsColumn, onEdit, onDelete]);
 
   return (
     <DataTable

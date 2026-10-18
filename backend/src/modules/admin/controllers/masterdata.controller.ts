@@ -14,7 +14,10 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { CurrentUser } from '../../../common/decorators/index.js';
+import {
+  CurrentUser,
+  HasPermission,
+} from '../../../common/decorators/index.js';
 import { UserResponse } from '../../users/dtos/index.js';
 import { MasterDataDto } from '../dtos/index.js';
 import { MasterDataService } from '../services/index.js';
@@ -26,6 +29,7 @@ export class MasterDataController {
   constructor(private readonly masterDataService: MasterDataService) {}
 
   @Get('groups/all')
+  @HasPermission('MASTERDATA_VIEW')
   @ApiOperation({ summary: 'Lấy danh sách nhóm master data' })
   async getAllGroups() {
     return this.masterDataService.getAllGroups();
@@ -39,6 +43,7 @@ export class MasterDataController {
   }
 
   @Post()
+  @HasPermission('MASTERDATA_CREATE')
   @ApiOperation({ summary: 'Tạo master data' })
   async createMasterData(
     @Body() dto: MasterDataDto,
@@ -48,6 +53,7 @@ export class MasterDataController {
   }
 
   @Patch(':id')
+  @HasPermission('MASTERDATA_UPDATE')
   @ApiOperation({ summary: 'Cập nhật master data' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async updateMasterData(
@@ -59,6 +65,7 @@ export class MasterDataController {
   }
 
   @Delete(':id')
+  @HasPermission('MASTERDATA_DELETE')
   @ApiOperation({ summary: 'Xóa master data' })
   @ApiParam({ name: 'id', example: 1, type: Number })
   async removeMasterData(

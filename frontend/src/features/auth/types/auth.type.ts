@@ -8,6 +8,8 @@ export interface Permission {
   id: number;
   code: string;
   name: string;
+  action: string;
+  menuId: number;
 }
 
 export interface UserProfile {

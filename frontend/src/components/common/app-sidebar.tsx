@@ -34,6 +34,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { type Permission } from "@/features/auth";
 import { MenuIcon, useSidebarMenus, type MenuItem } from "@/features/menus";
 import {
   useMyWorkspaces,
@@ -42,10 +43,42 @@ import {
   WorkspaceDetailModal,
   type WorkspaceItem,
 } from "@/features/workspaces";
+import { useAuthStore } from "@/stores/auth-store";
 
 export type ExtendedMenuItem = MenuItem & {
   rawWorkspace?: WorkspaceItem;
 };
+
+const VIEW_PERMISSION_ACTION = "ACTION001";
+
+/**
+ * Lọc danh sách menu theo quyền xem (ACTION001) từ thông tin permissions của user (me).
+ * Nếu user không có quyền ACTION001 của menu nào thì không hiển thị menu đó trên sidebar.
+ */
+function filterMenusByViewPermission(
+  menus: MenuItem[],
+  permissions: Permission[],
+): MenuItem[] {
+  if (!Array.isArray(menus) || menus.length === 0) return [];
+  if (!Array.isArray(permissions) || permissions.length === 0) return [];
+
+  const viewableMenuIds = new Set<number>(
+    permissions
+      .filter((p) => p.action?.toUpperCase() === VIEW_PERMISSION_ACTION)
+      .map((p) => Number(p.menuId)),
+  );
+
+  const filterTree = (items: MenuItem[]): MenuItem[] => {
+    return items
+      .filter((item) => viewableMenuIds.has(Number(item.id)))
+      .map((item) => ({
+        ...item,
+        children: item.children ? filterTree(item.children) : [],
+      }));
+  };
+
+  return filterTree(menus);
+}
 
 /**
  * Kiểm tra xem một menu item có phải là nhánh Workspace hay không
@@ -606,6 +639,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const queryClient = useQueryClient();
   const { setOpen, isMobile, setOpenMobile } = useSidebar();
 
+  const permissions = useAuthStore((s) => s.permissions);
+  const isAuthInitialized = useAuthStore((s) => s.isInitialized);
+
   const { data: rawSidebarMenus = [], isLoading: isLoadingMenus } =
     useSidebarMenus();
   const { data: myWorkspaces = [], isLoading: isLoadingWorkspaces } =
@@ -626,12 +662,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     Set<number>
   >(new Set());
 
-  // Tích hợp workspace vào nhánh menu có alias/tên Workspace
+  // Lọc các menu mà user (me) có quyền xem (ACTION001), sau đó tích hợp workspace
   const sidebarMenus = React.useMemo(() => {
-    return enrichMenusWithWorkspaces(rawSidebarMenus, myWorkspaces);
-  }, [rawSidebarMenus, myWorkspaces]);
+    const permittedMenus = filterMenusByViewPermission(
+      rawSidebarMenus,
+      permissions,
+    );
+    return enrichMenusWithWorkspaces(permittedMenus, myWorkspaces);
+  }, [rawSidebarMenus, permissions, myWorkspaces]);
 
-  const isLoading = isLoadingMenus || isLoadingWorkspaces;
+  const isLoading =
+    isLoadingMenus || isLoadingWorkspaces || !isAuthInitialized;
 
   // Tìm menu cha tương ứng với route hiện tại (dẫn xuất trực tiếp trong render)
   const matchedParentId = React.useMemo(() => {

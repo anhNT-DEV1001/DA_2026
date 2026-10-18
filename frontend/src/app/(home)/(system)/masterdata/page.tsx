@@ -14,9 +14,16 @@ import {
   MASTERDATA_QUERY_KEY,
   type MasterData,
 } from "@/features/masterdata";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function MasterDataPage() {
   const queryClient = useQueryClient();
+  const permissions = useAuthStore((s) => s.permissions);
+  const canCreate = React.useMemo(
+    () => permissions.some((p) => p.code === "MASTERDATA_CREATE"),
+    [permissions],
+  );
+
   const [selectedGroup, setSelectedGroup] = React.useState<string>("");
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [page, setPage] = React.useState<number>(1);
@@ -132,7 +139,8 @@ export default function MasterDataPage() {
             Quản lý Master Data
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Quản lý danh mục dữ liệu master, các nhóm phân loại (Group, Value) và thứ tự hiển thị trong hệ thống.
+            Quản lý danh mục dữ liệu master, các nhóm phân loại (Group, Value)
+            và thứ tự hiển thị trong hệ thống.
           </p>
         </div>
 
@@ -151,14 +159,16 @@ export default function MasterDataPage() {
             Làm mới
           </Button>
 
-          <Button
-            size="sm"
-            className="gap-1.5 text-xs font-medium"
-            onClick={handleCreate}
-          >
-            <Plus className="size-3.5" />
-            Thêm master data
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="gap-1.5 text-xs font-medium"
+              onClick={handleCreate}
+            >
+              <Plus className="size-3.5" />
+              Thêm master data
+            </Button>
+          )}
         </div>
       </div>
 

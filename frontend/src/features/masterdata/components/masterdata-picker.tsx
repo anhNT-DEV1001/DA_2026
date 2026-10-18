@@ -45,6 +45,10 @@ export interface MasterDataPickerProps {
    * Cho phép xóa lựa chọn về rỗng
    */
   allowClear?: boolean;
+  /**
+   * Class tùy chỉnh cho PopoverContent
+   */
+  contentClassName?: string;
 }
 
 export function MasterDataPicker({
@@ -56,6 +60,7 @@ export function MasterDataPicker({
   triggerClassName = "",
   allOptionLabel,
   allowClear = false,
+  contentClassName = "",
 }: MasterDataPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
@@ -124,7 +129,10 @@ export function MasterDataPicker({
         }
       />
 
-      <PopoverContent className="w-56 p-2 gap-2" align="start">
+      <PopoverContent
+        className={cn("w-56 p-2 gap-2", contentClassName)}
+        align="start"
+      >
         {/* Input Tìm kiếm */}
         <div className="relative w-full">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />

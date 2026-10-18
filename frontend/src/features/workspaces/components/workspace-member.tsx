@@ -309,7 +309,8 @@ export function WorkspaceMember({
         align: "center",
         width: 140,
         cell: ({ row }) => {
-          const roleName = row.role?.name || "Thành viên";
+          const roleName = row.role?.description || row.role?.name || "Chưa gán vai trò";
+          const hasRole = Boolean(row.role?.id);
           const isOwner = roleName.toLowerCase().includes("owner") || roleName.toLowerCase().includes("chủ");
           const isAdmin = roleName.toLowerCase().includes("admin");
 
@@ -318,11 +319,13 @@ export function WorkspaceMember({
               variant="outline"
               className={cn(
                 "inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full",
-                isOwner
-                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                  : isAdmin
-                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-                    : "bg-muted/70 text-foreground border-border",
+                !hasRole
+                  ? "bg-muted/40 text-muted-foreground border-dashed border-border"
+                  : isOwner
+                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                    : isAdmin
+                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                      : "bg-muted/70 text-foreground border-border",
               )}
             >
               <Shield className="size-3" />

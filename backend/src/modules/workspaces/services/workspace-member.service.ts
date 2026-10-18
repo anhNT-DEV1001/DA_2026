@@ -174,14 +174,16 @@ export class WorkspaceMemberService {
       );
     }
 
-    // 3. Kiểm tra vai trò (Role) tồn tại
-    const roleExists = await this.roleRepo.exists({
-      where: { id: dto.roleId },
-    });
-    if (!roleExists) {
-      throw new BadRequestException(
-        `Vai trò (Role) với ID #${dto.roleId} không tồn tại trên hệ thống.`,
-      );
+    // 3. Kiểm tra vai trò (Role) tồn tại nếu có chỉ định
+    if (dto.roleId) {
+      const roleExists = await this.roleRepo.exists({
+        where: { id: dto.roleId },
+      });
+      if (!roleExists) {
+        throw new BadRequestException(
+          `Vai trò (Role) với ID #${dto.roleId} không tồn tại trên hệ thống.`,
+        );
+      }
     }
 
     // 4. Xác định trạng thái ban đầu:
@@ -218,7 +220,7 @@ export class WorkspaceMemberService {
         );
       }
       // Nếu trước đó bị từ chối (MS003), cho phép gửi lại yêu cầu / thêm lại
-      existingMember.roleId = dto.roleId;
+      existingMember.roleId = dto.roleId ?? null;
       existingMember.status = status;
       existingMember.joinedAt = joinedAt;
       existingMember.updatedBy = currentUserId ?? null;
@@ -230,7 +232,7 @@ export class WorkspaceMemberService {
     const newMember = this.workmemRepo.create({
       workspaceId,
       userId: dto.userId,
-      roleId: dto.roleId,
+      roleId: dto.roleId ?? null,
       status: status,
       joinedAt: joinedAt,
       createdBy: currentUserId ?? null,
@@ -351,13 +353,15 @@ export class WorkspaceMemberService {
 
     // Nếu cập nhật vai trò, kiểm tra roleId có hợp lệ không
     if (dto.roleId !== undefined) {
-      const roleExists = await this.roleRepo.exists({
-        where: { id: dto.roleId },
-      });
-      if (!roleExists) {
-        throw new BadRequestException(
-          `Vai trò với ID #${dto.roleId} không tồn tại trên hệ thống.`,
-        );
+      if (dto.roleId !== null) {
+        const roleExists = await this.roleRepo.exists({
+          where: { id: dto.roleId },
+        });
+        if (!roleExists) {
+          throw new BadRequestException(
+            `Vai trò với ID #${dto.roleId} không tồn tại trên hệ thống.`,
+          );
+        }
       }
       member.roleId = dto.roleId;
     }
