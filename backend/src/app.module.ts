@@ -15,6 +15,8 @@ import { PermissionGuard } from './modules/admin/guards/index.js';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { throttlerConfig } from './config/throttler.config.js';
 import { TasksModule } from './modules/tasks/tasks.module.js';
+import { WebsocketModule } from './infrastructure/websockets/websocket.module.js';
+import { NotificationModule } from './modules/notifications/notification.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -32,7 +34,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       appSecret: process.env.APP_SECRET as string,
       serviceId: process.env.APP_SERVICE_ID as string,
     }),
-
+    WebsocketModule,
     DatabaseModule,
     QueueModule,
     AdminModule,
@@ -40,6 +42,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     AuthModule,
     WorkspacesModule,
     TasksModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [

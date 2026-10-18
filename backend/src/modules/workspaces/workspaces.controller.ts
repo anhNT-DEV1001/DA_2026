@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
@@ -25,6 +26,7 @@ import {
   WorkspaceMemberRequest,
   WorkspaceRequest,
 } from './dtos/index.js';
+import { WorkspaceGuard } from './guards/index.js';
 import { WorkspaceMemberService, WorkspacesService } from './services/index.js';
 
 @ApiTags('Workspaces')
@@ -59,6 +61,7 @@ export class WorkspacesController {
   }
 
   @Get('slug/:slug')
+  @UseGuards(WorkspaceGuard)
   @HasPermission('WORKSPACE_VIEW')
   @ApiOperation({ summary: 'Lấy chi tiết workspace theo slug' })
   @ApiParam({ name: 'slug', example: 'workspace-da-2026', type: String })

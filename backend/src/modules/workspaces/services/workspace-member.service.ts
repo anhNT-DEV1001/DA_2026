@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -18,9 +19,13 @@ import {
   PageMetadataResponse,
   PageResponse,
 } from '../../../common/responses/index.js';
+import { NotificationService } from '../../notifications/notification.service.js';
+import { CreateNotificationDto } from '../../notifications/dtos/index.js';
 
 @Injectable()
 export class WorkspaceMemberService {
+  private readonly logger = new Logger(WorkspaceMemberService.name);
+
   constructor(
     @InjectRepository(WorkspaceMember)
     private readonly workmemRepo: Repository<WorkspaceMember>,
@@ -29,7 +34,79 @@ export class WorkspaceMemberService {
     @InjectRepository(Role)
     private readonly roleRepo: Repository<Role>,
     private readonly userService: UsersService,
+    private readonly notificationService: NotificationService,
   ) {}
+
+  /**
+   * Gửi thông báo liên quan tới workspace.
+   * Lỗi gửi thông báo chỉ ghi log, không làm hỏng nghiệp vụ chính đã lưu thành công.
+   */
+  private async notify(
+    workspace: Workspace,
+    dto: Omit<CreateNotificationDto, 'workspaceId' | 'entityType' | 'entityId'>,
+    userIds: number[],
+  ): Promise<void> {
+    try {
+      await this.notificationService.create(
+        {
+          ...dto,
+          workspaceId: workspace.id,
+          entityType: 'workspace',
+          entityId: workspace.id,
+          data: {
+            workspaceName: workspace.name,
+            workspaceSlug: workspace.slug,
+            ...dto.data,
+          },
+        },
+        userIds,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Gửi thông báo "${dto.type}" cho workspace #${workspace.id} thất bại`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
+  /**
+   * Thông báo sau khi thêm thành viên:
+   * - Đã tham gia (MS001): báo cho người được thêm.
+   * - Chờ duyệt (MS002): báo cho Owner để phê duyệt.
+   */
+  private async notifyMemberAdded(
+    workspace: Workspace,
+    userId: number,
+    status: string,
+    currentUserId?: number,
+  ): Promise<void> {
+    if (status === 'MS002') {
+      await this.notify(
+        workspace,
+        {
+          type: 'workspace.member_requested',
+          title: 'Yêu cầu tham gia workspace',
+          content: `Có yêu cầu tham gia workspace "${workspace.name}" đang chờ bạn phê duyệt.`,
+          actorId: currentUserId ?? null,
+          data: { userId },
+        },
+        [workspace.ownerId],
+      );
+      return;
+    }
+
+    await this.notify(
+      workspace,
+      {
+        type: 'workspace.member_added',
+        title: 'Bạn đã được thêm vào workspace',
+        content: `Bạn đã được thêm vào workspace "${workspace.name}".`,
+        actorId: currentUserId ?? null,
+        data: { userId },
+      },
+      [userId],
+    );
+  }
 
   /**
    * Lấy danh sách thành viên trong workspace:
@@ -225,6 +302,12 @@ export class WorkspaceMemberService {
       existingMember.joinedAt = joinedAt;
       existingMember.updatedBy = currentUserId ?? null;
       await this.workmemRepo.save(existingMember);
+      await this.notifyMemberAdded(
+        workspace,
+        existingMember.userId,
+        status,
+        currentUserId,
+      );
       return this.findOne(workspaceId, existingMember.userId);
     }
 
@@ -239,6 +322,12 @@ export class WorkspaceMemberService {
     });
 
     const savedMember = await this.workmemRepo.save(newMember);
+    await this.notifyMemberAdded(
+      workspace,
+      savedMember.userId,
+      status,
+      currentUserId,
+    );
 
     // Trả về dữ liệu kèm quan hệ role & user
     return this.findOne(workspaceId, savedMember.userId);
@@ -281,6 +370,17 @@ export class WorkspaceMemberService {
     member.updatedBy = currentUserId ?? null;
 
     await this.workmemRepo.save(member);
+    await this.notify(
+      workspace,
+      {
+        type: 'workspace.member_approved',
+        title: 'Yêu cầu tham gia đã được duyệt',
+        content: `Yêu cầu tham gia workspace "${workspace.name}" của bạn đã được phê duyệt.`,
+        actorId: currentUserId ?? null,
+        data: { userId },
+      },
+      [userId],
+    );
     return this.findOne(workspaceId, userId);
   }
 
@@ -326,6 +426,17 @@ export class WorkspaceMemberService {
     member.status = 'MS003';
     member.updatedBy = currentUserId ?? null;
     await this.workmemRepo.save(member);
+    await this.notify(
+      workspace,
+      {
+        type: 'workspace.member_rejected',
+        title: 'Yêu cầu tham gia bị từ chối',
+        content: `Yêu cầu tham gia workspace "${workspace.name}" của bạn đã bị từ chối.`,
+        actorId: currentUserId ?? null,
+        data: { userId },
+      },
+      [userId],
+    );
 
     return {
       message: `Đã từ chối yêu cầu tham gia của người dùng #${userId} thành công.`,

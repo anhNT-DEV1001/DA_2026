@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
 import QueryProvider from "@/providers/query-client";
 import { AuthProvider } from "@/providers/auth-provider";
+import { WebsocketProvider } from "@/providers/websocket-provider";
 
 import { ThemeProvider } from "@/providers/theme-provider";
 
@@ -53,10 +54,12 @@ export default function RootLayout({
         >
           <QueryProvider>
             <AuthProvider>
-              <TooltipProvider>
-                {children}
-                <Toaster />
-              </TooltipProvider>
+              <WebsocketProvider>
+                <TooltipProvider>
+                  {children}
+                  <Toaster />
+                </TooltipProvider>
+              </WebsocketProvider>
             </AuthProvider>
           </QueryProvider>
         </ThemeProvider>

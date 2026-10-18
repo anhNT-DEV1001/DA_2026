@@ -6,16 +6,19 @@ import {
 } from './services/index.js';
 import { WorkspacesController } from './workspaces.controller.js';
 import { Workspace, WorkspaceMember } from './entities/index.js';
+import { WorkspaceGuard } from './guards/index.js';
 import { Role, MasterData } from '../admin/entites/index.js';
 import { UsersModule } from '../users/users.module.js';
+import { NotificationModule } from '../notifications/notification.module.js';
 
 @Module({
   imports: [
     UsersModule,
+    NotificationModule,
     TypeOrmModule.forFeature([Workspace, WorkspaceMember, Role, MasterData]),
   ],
-  providers: [WorkspacesService, WorkspaceMemberService],
+  providers: [WorkspacesService, WorkspaceMemberService, WorkspaceGuard],
   controllers: [WorkspacesController],
-  exports: [WorkspacesService, WorkspaceMemberService],
+  exports: [WorkspacesService, WorkspaceMemberService, WorkspaceGuard],
 })
 export class WorkspacesModule {}

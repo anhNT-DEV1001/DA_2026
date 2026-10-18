@@ -3,7 +3,7 @@
 import * as React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { NotificationsNav } from "@/components/common/notifications-nav";
+import { NotificationBell } from "@/features/notifications";
 import { NavUser } from "@/components/common/nav-user";
 
 export function AppHeader() {
@@ -15,7 +15,7 @@ export function AppHeader() {
 
       <div className="flex items-center gap-2">
         <ThemeToggle />
-        <NotificationsNav />
+        <NotificationBell />
         <NavUser />
       </div>
     </header>

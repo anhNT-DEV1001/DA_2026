@@ -56,7 +56,7 @@ export class PermissionGuard implements CanActivate {
 
       if (!hasPermission) {
         throw new ForbiddenException(
-          `Bạn không có quyền thực hiện chức năng này (yêu cầu quyền: ${code}).`,
+          `Bạn không có quyền thực hiện chức năng này.`,
         );
       }
     }
