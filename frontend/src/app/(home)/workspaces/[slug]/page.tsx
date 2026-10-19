@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   Briefcase,
+  ListTodo,
   Globe,
   Info,
   Lock,
@@ -23,8 +24,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
+import { WorkspaceTasks } from "@/features/tasks";
 
-type TabKey = "info" | "members";
+type TabKey = "info" | "members" | "tasks";
 
 export default function WorkspaceDetailPage() {
   const router = useRouter();
@@ -39,19 +41,10 @@ export default function WorkspaceDetailPage() {
 
   // Lấy tab từ URL query param nếu có (ví dụ ?tab=members), mặc định là 'info'
   const tabFromUrl = searchParams.get("tab") as TabKey | null;
-  const [activeTab, setActiveTab] = React.useState<TabKey>(
-    tabFromUrl === "members" ? "members" : "info",
-  );
-
-  // Khi URL searchParams thay đổi tab thì sync vào state
-  React.useEffect(() => {
-    if (tabFromUrl === "info" || tabFromUrl === "members") {
-      setActiveTab(tabFromUrl);
-    }
-  }, [tabFromUrl]);
+  const activeTab: TabKey =
+    tabFromUrl === "members" || tabFromUrl === "tasks" ? tabFromUrl : "info";
 
   const handleTabChange = (tab: TabKey) => {
-    setActiveTab(tab);
     // Cập nhật URL query param mà không reload trang
     const newParams = new URLSearchParams(searchParams.toString());
     newParams.set("tab", tab);
@@ -209,7 +202,7 @@ export default function WorkspaceDetailPage() {
         </div>
       </div>
 
-      {/* Tabs Switcher: Tab 1 - Thông tin, Tab 2 - Thành viên */}
+      {/* Tabs: Thông tin, Thành viên, Task */}
       <div className="flex items-center gap-1 border-b border-border select-none">
         {/* Tab 1: Thông tin */}
         <button
@@ -258,6 +251,24 @@ export default function WorkspaceDetailPage() {
             <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary rounded-t-sm" />
           )}
         </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange("tasks")}
+          aria-current={activeTab === "tasks" ? "page" : undefined}
+          className={cn(
+            "relative flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors focus-visible:outline-2 cursor-pointer",
+            activeTab === "tasks"
+              ? "text-primary"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <ListTodo className="size-4" aria-hidden="true" />
+          <span>Task</span>
+          {activeTab === "tasks" && (
+            <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary rounded-t-sm" />
+          )}
+        </button>
       </div>
 
       {/* Tab Panels */}
@@ -265,6 +276,8 @@ export default function WorkspaceDetailPage() {
         {activeTab === "info" ? (
           /* Tab 1: Hiển thị thông tin Workspace */
           <WorkspaceInfo workspace={workspace} canEdit={canUpdate} />
+        ) : activeTab === "tasks" ? (
+          <WorkspaceTasks key={workspace.id} workspace={workspace} />
         ) : (
           /* Tab 2: Quản lý thành viên trong Workspace theo Workspace ID */
           <WorkspaceMember
