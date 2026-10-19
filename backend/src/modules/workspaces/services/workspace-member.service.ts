@@ -264,19 +264,25 @@ export class WorkspaceMemberService {
     }
 
     // 4. Xác định trạng thái ban đầu:
-    // - Nếu là Owner của workspace thêm: duyệt thẳng vào trạng thái "Tham gia" (MS001)
-    // - Nếu workspace Private (WSM001) & không phải Owner thêm: cần duyệt => "Chờ duyệt" (MS002), joinedAt = null
-    // - Nếu workspace Public (WSM002): không cần duyệt => "Tham gia" (MS001), joinedAt = new Date()
+    // - Luôn ưu tiên theo trạng thái từ DTO input nếu có truyền (kể cả là Owner thêm thành viên)
+    // - Nếu không truyền trạng thái trong DTO:
+    //   + Nếu là Owner của workspace hoặc workspace Public: duyệt thẳng vào trạng thái "Tham gia" (MS001)
+    //   + Nếu workspace Private (WSM001 / private) & không phải Owner thêm: cần duyệt => "Chờ duyệt" (MS002)
     const isOwner = currentUserId === workspace.ownerId;
-    const isPrivate = workspace.mode === 'WSM001';
+    const isPrivate =
+      workspace.mode === 'WSM001' || workspace.mode === 'private';
 
-    let status = 'MS001';
-    let joinedAt: Date | null = new Date();
-
-    if (!isOwner && isPrivate) {
-      status = 'MS002'; // Chờ duyệt
-      joinedAt = null;
+    let status = dto.status;
+    if (!status) {
+      if (!isOwner && isPrivate) {
+        status = 'MS002'; // Chờ duyệt
+      } else {
+        status = 'MS001'; // Tham gia
+      }
     }
+
+    const joinedAt =
+      status === 'MS001' || status === 'active' ? new Date() : null;
 
     // 5. Kiểm tra user đã là thành viên của workspace hay chưa
     const existingMember = await this.workmemRepo.findOne({
@@ -480,6 +486,12 @@ export class WorkspaceMemberService {
     // Nếu cập nhật trạng thái
     if (dto.status !== undefined) {
       member.status = dto.status;
+      if (
+        (dto.status === 'MS001' || dto.status === 'active') &&
+        !member.joinedAt
+      ) {
+        member.joinedAt = new Date();
+      }
     }
 
     member.updatedBy = currentUserId ?? null;

@@ -43,7 +43,7 @@ export function NotificationBell() {
   const [unreadOnly, setUnreadOnly] = React.useState(false);
 
   useNotificationRealtime();
-  const { unseenCount, unreadCount } = useNotificationCount();
+  const { unreadCount } = useNotificationCount();
   const {
     notifications,
     isLoading,
@@ -52,7 +52,6 @@ export function NotificationBell() {
     isFetchingNextPage,
   } = useNotificationList({ unreadOnly, enabled: open });
   const {
-    markAllSeen,
     markRead,
     markAllRead,
     isMarkingAllRead,
@@ -70,8 +69,6 @@ export function NotificationBell() {
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (!next) setConfirmingClear(false);
-    // Mở danh sách thì coi như đã xem -> reset badge
-    if (next && unseenCount > 0) markAllSeen();
   };
 
   const handleItemClick = (item: NotificationItem) => {
@@ -100,14 +97,14 @@ export function NotificationBell() {
             title="Thông báo"
           >
             <Bell className="size-4" />
-            {unseenCount > 0 && (
+            {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-white">
-                {formatBadge(unseenCount)}
+                {formatBadge(unreadCount)}
               </span>
             )}
             <span className="sr-only">
               Thông báo
-              {unseenCount > 0 ? ` (${unseenCount} mới)` : ""}
+              {unreadCount > 0 ? ` (${unreadCount} chưa đọc)` : ""}
             </span>
           </Button>
         }
