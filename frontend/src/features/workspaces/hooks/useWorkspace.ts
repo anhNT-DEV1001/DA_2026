@@ -6,6 +6,7 @@ import type {
   CreateWorkspaceDto,
   UpdateWorkspaceDto,
   WorkspaceQueryParams,
+  WorkspaceSearchParams,
 } from "../types";
 
 export const WORKSPACE_QUERY_KEYS = {
@@ -14,6 +15,8 @@ export const WORKSPACE_QUERY_KEYS = {
   lists: () => [...WORKSPACE_QUERY_KEYS.all, "list"] as const,
   list: (params?: WorkspaceQueryParams) =>
     [...WORKSPACE_QUERY_KEYS.lists(), params] as const,
+  search: (params?: WorkspaceSearchParams) =>
+    [...WORKSPACE_QUERY_KEYS.all, "search", params] as const,
   details: () => [...WORKSPACE_QUERY_KEYS.all, "detail"] as const,
   detail: (id: number) => [...WORKSPACE_QUERY_KEYS.details(), id] as const,
   detailSlug: (slug: string) =>
@@ -27,6 +30,16 @@ export function useMyWorkspaces() {
   return useQuery({
     queryKey: WORKSPACE_QUERY_KEYS.my(),
     queryFn: () => workspaceService.getMyWorkspaces(),
+  });
+}
+
+/**
+ * Hook tìm kiếm workspace để đăng ký tham gia (kèm joinStatus của user hiện tại)
+ */
+export function useWorkspaceSearch(params?: WorkspaceSearchParams) {
+  return useQuery({
+    queryKey: WORKSPACE_QUERY_KEYS.search(params),
+    queryFn: () => workspaceService.searchWorkspaces(params),
   });
 }
 

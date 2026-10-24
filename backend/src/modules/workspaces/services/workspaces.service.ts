@@ -19,6 +19,7 @@ import {
 } from '../../../common/responses/index.js';
 import { slugify } from '../utils/slug.util.js';
 import { TaskStatusService } from '../../tasks/task-status.service.js';
+import WorkspaceSearch from '../dtos/workspace.dto.js';
 
 @Injectable()
 export class WorkspacesService {
@@ -389,5 +390,63 @@ export class WorkspacesService {
 
     workspace.deletedBy = user?.id ?? null;
     return await this.workspaceRepo.softRemove(workspace);
+  }
+
+  async searchWorkspaces(
+    query: WorkspaceSearch,
+    user?: UserResponse,
+  ): Promise<PageResponse<Workspace>> {
+    const qb = this.workspaceRepo
+      .createQueryBuilder('ws')
+      .leftJoinAndSelect('ws.owner', 'owner')
+      .leftJoinAndMapOne(
+        'ws.modeData',
+        MasterData,
+        'modeData',
+        'modeData.group = :modeGroup AND modeData.value = ws.mode',
+        { modeGroup: 'WSM' },
+      )
+      .orderBy('ws.createdAt', 'DESC');
+
+    // Gắn trạng thái tham gia của user hiện tại (nếu đã đăng nhập)
+    if (user?.id) {
+      qb.leftJoinAndMapOne(
+        'ws.myMembership',
+        WorkspaceMember,
+        'myMembership',
+        'myMembership.workspaceId = ws.id AND myMembership.userId = :userId',
+        { userId: user.id },
+      );
+    }
+
+    if (query.search?.trim()) {
+      const searchTerm = `%${query.search.trim()}%`;
+      qb.andWhere(
+        '(ws.name ILIKE :search OR ws.slug ILIKE :search OR ws.description ILIKE :search)',
+        { search: searchTerm },
+      );
+    }
+
+    if (query.mode) {
+      qb.andWhere('ws.mode = :mode', { mode: query.mode });
+    }
+
+    const [items, itemCount] = await qb
+      .skip(query.skip)
+      .take(query.limit ?? 15)
+      .getManyAndCount();
+
+    const mappedItems = items.map((item) => {
+      this.attachModeName(item);
+      item.joinStatus = (item as any).myMembership?.status ?? null;
+      return item;
+    });
+
+    const meta = new PageMetadataResponse({
+      pageRequest: query,
+      itemCount,
+    });
+
+    return new PageResponse(mappedItems, meta);
   }
 }

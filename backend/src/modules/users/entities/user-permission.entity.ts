@@ -23,6 +23,6 @@ export class UserPermission extends BaseEntity {
   @JoinColumn({ name: 'permission_id' })
   permission: Relation<Permission>;
 
-  @Column({ name: 'revorke_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'revorke_at', type: 'timestamptz', nullable: true })
   revorkeAt: Date | null;
 }

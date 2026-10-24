@@ -32,6 +32,6 @@ export class WorkspaceMember extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: false, default: 'active' })
   status: string;
 
-  @Column({ name: 'joined_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'joined_at', type: 'timestamptz', nullable: true })
   joinedAt: Date | null;
 }

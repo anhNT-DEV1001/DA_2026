@@ -9,8 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { useAuthStore } from "@/stores/auth-store";
-import { useWorkspace, useWorkspaceList } from "../hooks";
-import type { WorkspaceItem, WorkspaceQueryParams } from "../types";
+import { useWorkspace, useWorkspaceList } from "../../hooks";
+import type { WorkspaceItem, WorkspaceQueryParams } from "../../types";
 import { WorkspaceDetailModal } from "./workspace-detail";
 import {
   Briefcase,
@@ -193,10 +193,7 @@ export function WorkspaceTable({
   };
 
   // Xử lý mở chỉnh sửa
-  const handleEditClick = (
-    e: React.MouseEvent,
-    workspace: WorkspaceItem,
-  ) => {
+  const handleEditClick = (e: React.MouseEvent, workspace: WorkspaceItem) => {
     e.stopPropagation();
     if (onEdit) {
       onEdit(workspace);
@@ -206,10 +203,7 @@ export function WorkspaceTable({
   };
 
   // Xử lý mở xác nhận xóa
-  const handleDeleteClick = (
-    e: React.MouseEvent,
-    workspace: WorkspaceItem,
-  ) => {
+  const handleDeleteClick = (e: React.MouseEvent, workspace: WorkspaceItem) => {
     e.stopPropagation();
     setWorkspaceToDelete(workspace);
   };
@@ -235,7 +229,8 @@ export function WorkspaceTable({
       toast.add({
         title: "Xóa thất bại",
         description:
-          error?.message || "Có lỗi xảy ra khi xóa workspace. Vui lòng thử lại!",
+          error?.message ||
+          "Có lỗi xảy ra khi xóa workspace. Vui lòng thử lại!",
         type: "error",
       });
     }
@@ -313,7 +308,8 @@ export function WorkspaceTable({
         width: 130,
         cell: ({ row }) => {
           const modeLabel = row.modeName || row.modeData?.name || row.mode;
-          if (!modeLabel) return <span className="text-muted-foreground">-</span>;
+          if (!modeLabel)
+            return <span className="text-muted-foreground">-</span>;
 
           const isPublic =
             row.mode === "public" ||
@@ -537,4 +533,3 @@ export function WorkspaceTable({
     </div>
   );
 }
-

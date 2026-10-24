@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
-import { useWorkspaceMember } from "../hooks";
+import { useWorkspaceMember } from "../../hooks";
 import { useUserSearch } from "@/features/users/hooks";
 import { RolePicker } from "@/features/roles";
 import { MasterDataPicker } from "@/features/masterdata";
@@ -16,7 +16,7 @@ import type {
   AddWorkspaceMemberDto,
   UpdateWorkspaceMemberDto,
   WorkspaceMemberItem,
-} from "../types";
+} from "../../types";
 import {
   Loader2,
   Pencil,

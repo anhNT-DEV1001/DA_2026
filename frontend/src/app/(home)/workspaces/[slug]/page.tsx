@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   WorkspaceInfo,
   WorkspaceMember,
+  SpaceTable,
   useWorkspaceBySlug,
 } from "@/features/workspaces";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   Briefcase,
+  FolderOpen,
   ListTodo,
   Globe,
   Info,
@@ -26,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { WorkspaceTasks } from "@/features/tasks";
 
-type TabKey = "info" | "members" | "tasks";
+type TabKey = "info" | "spaces" | "members" | "tasks";
 
 export default function WorkspaceDetailPage() {
   const router = useRouter();
@@ -42,7 +44,11 @@ export default function WorkspaceDetailPage() {
   // Lấy tab từ URL query param nếu có (ví dụ ?tab=members), mặc định là 'info'
   const tabFromUrl = searchParams.get("tab") as TabKey | null;
   const activeTab: TabKey =
-    tabFromUrl === "members" || tabFromUrl === "tasks" ? tabFromUrl : "info";
+    tabFromUrl === "spaces" ||
+    tabFromUrl === "members" ||
+    tabFromUrl === "tasks"
+      ? tabFromUrl
+      : "info";
 
   const handleTabChange = (tab: TabKey) => {
     // Cập nhật URL query param mà không reload trang
@@ -222,7 +228,25 @@ export default function WorkspaceDetailPage() {
           )}
         </button>
 
-        {/* Tab 2: Thành viên */}
+        {/* Tab 2: Spaces */}
+        <button
+          type="button"
+          onClick={() => handleTabChange("spaces")}
+          className={cn(
+            "relative flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors focus:outline-none cursor-pointer",
+            activeTab === "spaces"
+              ? "text-primary"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <FolderOpen className="size-4" />
+          <span>Spaces</span>
+          {activeTab === "spaces" && (
+            <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary rounded-t-sm" />
+          )}
+        </button>
+
+        {/* Tab 3: Thành viên */}
         <button
           type="button"
           onClick={() => handleTabChange("members")}
@@ -274,12 +298,12 @@ export default function WorkspaceDetailPage() {
       {/* Tab Panels */}
       <div className="w-full">
         {activeTab === "info" ? (
-          /* Tab 1: Hiển thị thông tin Workspace */
           <WorkspaceInfo workspace={workspace} canEdit={canUpdate} />
+        ) : activeTab === "spaces" ? (
+          <SpaceTable key={workspace.id} workspaceId={workspace.id} />
         ) : activeTab === "tasks" ? (
           <WorkspaceTasks key={workspace.id} workspace={workspace} />
         ) : (
-          /* Tab 2: Quản lý thành viên trong Workspace theo Workspace ID */
           <WorkspaceMember
             workspaceId={workspace.id}
             workspaceName={workspace.name}

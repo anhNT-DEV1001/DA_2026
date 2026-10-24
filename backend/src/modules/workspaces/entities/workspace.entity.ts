@@ -44,4 +44,8 @@ export class Workspace extends SoftDeleteEntity {
   modeName?: string | null;
 
   modeData?: Relation<MasterData> | null;
+
+  myMembership?: Relation<WorkspaceMember> | null;
+
+  joinStatus?: string | null;
 }

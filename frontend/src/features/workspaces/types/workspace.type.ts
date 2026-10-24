@@ -72,3 +72,26 @@ export interface PaginatedWorkspaceResponse {
     hasNextPage: boolean;
   };
 }
+
+export interface WorkspaceSearchItem extends WorkspaceItem {
+  joinStatus?: string | null;
+}
+
+export interface WorkspaceSearchParams {
+  search?: string;
+  mode?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedWorkspaceSearchResponse {
+  items: WorkspaceSearchItem[];
+  meta: {
+    page: number;
+    limit: number;
+    itemCount: number;
+    pageCount: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+}

@@ -2,15 +2,22 @@ import { apiClient } from "@/lib/axios";
 import type {
   AddWorkspaceMemberDto,
   CreateWorkspaceDto,
+  CreateSpaceDto,
   DeleteWorkspaceMemberResponse,
   PaginatedWorkspaceMemberResponse,
   PaginatedWorkspaceResponse,
+  PaginatedWorkspaceSearchResponse,
+  PaginatedSpaceResponse,
+  SpaceItem,
+  SpaceQueryParams,
+  UpdateSpaceDto,
   UpdateWorkspaceDto,
   UpdateWorkspaceMemberDto,
   WorkspaceItem,
   WorkspaceMemberItem,
   WorkspaceMemberQueryParams,
   WorkspaceQueryParams,
+  WorkspaceSearchParams,
 } from "../types";
 
 export const workspaceService = {
@@ -24,6 +31,19 @@ export const workspaceService = {
    */
   getMyWorkspaces: async (): Promise<WorkspaceItem[]> => {
     return apiClient.get<unknown, WorkspaceItem[]>("/workspaces/my");
+  },
+
+  /**
+   * Tìm kiếm workspace để đăng ký tham gia (kèm trạng thái tham gia của user hiện tại)
+   * GET /workspaces/search
+   */
+  searchWorkspaces: async (
+    params?: WorkspaceSearchParams,
+  ): Promise<PaginatedWorkspaceSearchResponse> => {
+    return apiClient.get<unknown, PaginatedWorkspaceSearchResponse>(
+      "/workspaces/search",
+      { params },
+    );
   },
 
   /**
@@ -182,6 +202,79 @@ export const workspaceService = {
   ): Promise<{ message: string }> => {
     return apiClient.patch<unknown, { message: string }>(
       `/workspaces/${workspaceId}/members/${userId}/reject`,
+    );
+  },
+
+  /* ========================================================================= */
+  /*                                Space APIs                                 */
+  /* ========================================================================= */
+
+  /**
+   * Lấy danh sách space trong workspace (hỗ trợ tìm kiếm và phân trang)
+   * GET /workspaces/:id/spaces
+   */
+  getSpaces: async (
+    workspaceId: number,
+    params?: SpaceQueryParams,
+  ): Promise<PaginatedSpaceResponse | SpaceItem[]> => {
+    return apiClient.get<unknown, PaginatedSpaceResponse | SpaceItem[]>(
+      `/workspaces/${workspaceId}/spaces`,
+      { params },
+    );
+  },
+
+  /**
+   * Lấy chi tiết một space
+   * GET /workspaces/:id/spaces/:spaceId
+   */
+  getSpaceById: async (
+    workspaceId: number,
+    spaceId: number,
+  ): Promise<SpaceItem> => {
+    return apiClient.get<unknown, SpaceItem>(
+      `/workspaces/${workspaceId}/spaces/${spaceId}`,
+    );
+  },
+
+  /**
+   * Tạo mới space trong workspace
+   * POST /workspaces/:id/spaces
+   */
+  createSpace: async (
+    workspaceId: number,
+    dto: CreateSpaceDto,
+  ): Promise<SpaceItem> => {
+    return apiClient.post<unknown, SpaceItem>(
+      `/workspaces/${workspaceId}/spaces`,
+      dto,
+    );
+  },
+
+  /**
+   * Cập nhật thông tin space
+   * PATCH /workspaces/:id/spaces/:spaceId
+   */
+  updateSpace: async (
+    workspaceId: number,
+    spaceId: number,
+    dto: UpdateSpaceDto,
+  ): Promise<SpaceItem> => {
+    return apiClient.patch<unknown, SpaceItem>(
+      `/workspaces/${workspaceId}/spaces/${spaceId}`,
+      dto,
+    );
+  },
+
+  /**
+   * Xóa mềm space
+   * DELETE /workspaces/:id/spaces/:spaceId
+   */
+  deleteSpace: async (
+    workspaceId: number,
+    spaceId: number,
+  ): Promise<SpaceItem> => {
+    return apiClient.delete<unknown, SpaceItem>(
+      `/workspaces/${workspaceId}/spaces/${spaceId}`,
     );
   },
 };

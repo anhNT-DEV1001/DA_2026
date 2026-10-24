@@ -12,13 +12,13 @@ import {
   useWorkspaceMember,
   useWorkspaceMemberList,
   WORKSPACE_MEMBER_QUERY_KEYS,
-} from "../hooks";
-import type { WorkspaceMemberItem, WorkspaceMemberQueryParams } from "../types";
+} from "../../hooks";
+import type {
+  WorkspaceMemberItem,
+  WorkspaceMemberQueryParams,
+} from "../../types";
 import { WorkspaceMemberDetailModal } from "./workspace-member-detail";
-import {
-  MasterDataSelect,
-  useMasterDataByGroup,
-} from "@/features/masterdata";
+import { MasterDataSelect, useMasterDataByGroup } from "@/features/masterdata";
 import {
   Calendar,
   CheckCircle2,
@@ -93,8 +93,7 @@ export function WorkspaceMember({
     () => permissions.some((p) => p.code === "WORKSPACE_APPROVE"),
     [permissions],
   );
-  const showActionsColumn =
-    canManage && (canUpdate || canDelete || canApprove);
+  const showActionsColumn = canManage && (canUpdate || canDelete || canApprove);
 
   // Pagination states
   const [page, setPage] = React.useState(1);
@@ -120,8 +119,10 @@ export function WorkspaceMember({
     });
     // Fallback nếu dữ liệu cũ còn lưu 'active', 'pending', 'rejected'
     if (!map.has("active")) map.set("active", map.get("MS001") || "Tham gia");
-    if (!map.has("pending")) map.set("pending", map.get("MS002") || "Chờ duyệt");
-    if (!map.has("rejected")) map.set("rejected", map.get("MS003") || "Từ chối");
+    if (!map.has("pending"))
+      map.set("pending", map.get("MS002") || "Chờ duyệt");
+    if (!map.has("rejected"))
+      map.set("rejected", map.get("MS003") || "Từ chối");
     return map;
   }, [msMasterData]);
 
@@ -153,10 +154,11 @@ export function WorkspaceMember({
   }, [page, pageSize, debouncedSearch, statusFilter]);
 
   // Query danh sách thành viên
-  const { data: memberData, isLoading, refetch } = useWorkspaceMemberList(
-    workspaceId,
-    queryParams,
-  );
+  const {
+    data: memberData,
+    isLoading,
+    refetch,
+  } = useWorkspaceMemberList(workspaceId, queryParams);
 
   const {
     removeMember,
@@ -295,7 +297,8 @@ export function WorkspaceMember({
         accessorKey: "userId",
         cell: ({ row }) => {
           const user = row.user;
-          const displayName = user?.fullName || user?.username || `User #${row.userId}`;
+          const displayName =
+            user?.fullName || user?.username || `User #${row.userId}`;
           return (
             <div className="flex items-center gap-3">
               <Avatar size="sm" className="size-9 border border-border">
@@ -330,9 +333,12 @@ export function WorkspaceMember({
         align: "center",
         width: 140,
         cell: ({ row }) => {
-          const roleName = row.role?.description || row.role?.name || "Chưa gán vai trò";
+          const roleName =
+            row.role?.description || row.role?.name || "Chưa gán vai trò";
           const hasRole = Boolean(row.role?.id);
-          const isOwner = roleName.toLowerCase().includes("owner") || roleName.toLowerCase().includes("chủ");
+          const isOwner =
+            roleName.toLowerCase().includes("owner") ||
+            roleName.toLowerCase().includes("chủ");
           const isAdmin = roleName.toLowerCase().includes("admin");
 
           return (
@@ -425,7 +431,9 @@ export function WorkspaceMember({
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Calendar className="size-3.5 text-muted-foreground/70 shrink-0" />
-            <span className="truncate">{formatDate(row.joinedAt || row.createdAt)}</span>
+            <span className="truncate">
+              {formatDate(row.joinedAt || row.createdAt)}
+            </span>
           </div>
         ),
       },

@@ -10,8 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { useAuthStore } from "@/stores/auth-store";
-import { useWorkspace, useWorkspaceList } from "../hooks";
-import type { WorkspaceItem, WorkspaceQueryParams } from "../types";
+import { useWorkspace, useWorkspaceList } from "../../hooks";
+import type { WorkspaceItem, WorkspaceQueryParams } from "../../types";
 import { WorkspaceDetailModal } from "./workspace-detail";
 import {
   ArrowRight,
@@ -201,10 +201,7 @@ export function WorkspaceCards({
   };
 
   // Mở modal sửa
-  const handleEditClick = (
-    e: React.MouseEvent,
-    workspace: WorkspaceItem,
-  ) => {
+  const handleEditClick = (e: React.MouseEvent, workspace: WorkspaceItem) => {
     e.stopPropagation();
     if (onEdit) {
       onEdit(workspace);
@@ -214,10 +211,7 @@ export function WorkspaceCards({
   };
 
   // Mở modal xóa
-  const handleDeleteClick = (
-    e: React.MouseEvent,
-    workspace: WorkspaceItem,
-  ) => {
+  const handleDeleteClick = (e: React.MouseEvent, workspace: WorkspaceItem) => {
     e.stopPropagation();
     setWorkspaceToDelete(workspace);
   };
@@ -243,7 +237,8 @@ export function WorkspaceCards({
       toast.add({
         title: "Xóa thất bại",
         description:
-          error?.message || "Có lỗi xảy ra khi xóa workspace. Vui lòng thử lại!",
+          error?.message ||
+          "Có lỗi xảy ra khi xóa workspace. Vui lòng thử lại!",
         type: "error",
       });
     }
@@ -293,7 +288,8 @@ export function WorkspaceCards({
             Chưa có không gian làm việc nào
           </h3>
           <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-4">
-            Không tìm thấy workspace nào. Bạn có thể bắt đầu bằng cách tạo một không gian làm việc mới.
+            Không tìm thấy workspace nào. Bạn có thể bắt đầu bằng cách tạo một
+            không gian làm việc mới.
           </p>
           {emptyAction}
         </div>
@@ -347,9 +343,7 @@ export function WorkspaceCards({
                       disabled={starTogglingId === workspace.id}
                       className="inline-flex items-center justify-center p-1 rounded-md text-muted-foreground/60 hover:text-amber-500 hover:bg-muted/80 transition-all shrink-0"
                       title={
-                        workspace.isStar
-                          ? "Bỏ yêu thích"
-                          : "Đánh dấu yêu thích"
+                        workspace.isStar ? "Bỏ yêu thích" : "Đánh dấu yêu thích"
                       }
                     >
                       <Star
@@ -410,7 +404,10 @@ export function WorkspaceCards({
                     <div className="flex items-center gap-1.5 min-w-0">
                       {workspace.owner ? (
                         <>
-                          <Avatar size="sm" className="size-5 border border-border">
+                          <Avatar
+                            size="sm"
+                            className="size-5 border border-border"
+                          >
                             {workspace.owner.avatar && (
                               <AvatarImage
                                 src={workspace.owner.avatar}
@@ -502,11 +499,14 @@ export function WorkspaceCards({
                 {Math.min(page * pageSize, total)}
               </span>{" "}
               trên tổng số{" "}
-              <span className="font-medium text-foreground">{total}</span> workspace
+              <span className="font-medium text-foreground">{total}</span>{" "}
+              workspace
             </span>
 
             <div className="flex items-center gap-1.5 pl-2 border-l border-border/60">
-              <span className="text-[11px] text-muted-foreground">Mỗi trang:</span>
+              <span className="text-[11px] text-muted-foreground">
+                Mỗi trang:
+              </span>
               <select
                 aria-label="Số workspace mỗi trang"
                 value={pageSize}

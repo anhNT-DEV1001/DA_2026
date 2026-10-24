@@ -5,6 +5,7 @@ import {
   WorkspaceCards,
   WorkspaceTable,
   WorkspaceDetailModal,
+  WorkspaceRequestModal,
   WORKSPACE_QUERY_KEYS,
   type WorkspaceItem,
 } from "@/features/workspaces";
@@ -35,6 +36,7 @@ export default function WorkspacePage() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [selectedWorkspace, setSelectedWorkspace] =
     React.useState<WorkspaceItem | null>(null);
+  const [joinModalOpen, setJoinModalOpen] = React.useState(false);
 
   // Search & filter states
   const [search, setSearch] = React.useState("");
@@ -63,8 +65,7 @@ export default function WorkspacePage() {
   };
 
   const handleJoinWorkspace = () => {
-    // Logic to join a workspace (e.g., open a modal or navigate to a join page)
-    console.log("Join workspace clicked");
+    setJoinModalOpen(true);
   };
 
   const handleEdit = (workspace: WorkspaceItem) => {
@@ -218,6 +219,12 @@ export default function WorkspacePage() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         workspace={selectedWorkspace}
+      />
+
+      {/* Modal Tìm kiếm & Tham gia Workspace */}
+      <WorkspaceRequestModal
+        open={joinModalOpen}
+        onOpenChange={setJoinModalOpen}
       />
     </div>
   );

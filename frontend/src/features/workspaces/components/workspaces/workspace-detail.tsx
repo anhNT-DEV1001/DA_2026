@@ -7,13 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
-import { useWorkspace } from "../hooks";
+import { useWorkspace } from "../../hooks";
 import { MasterDataPicker } from "@/features/masterdata/components/masterdata-picker";
 import type {
   CreateWorkspaceDto,
   UpdateWorkspaceDto,
   WorkspaceItem,
-} from "../types";
+} from "../../types";
 import {
   Briefcase,
   Building2,

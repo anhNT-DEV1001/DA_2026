@@ -31,14 +31,14 @@ export class NotificationRecipient extends BaseEntity {
   user: Relation<User>;
 
   // null = chưa đọc
-  @Column({ name: 'read_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'read_at', type: 'timestamptz', nullable: true })
   readAt: Date | null;
 
   // Đã mở danh sách thông báo (dùng để reset badge)
-  @Column({ name: 'seen_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'seen_at', type: 'timestamptz', nullable: true })
   seenAt: Date | null;
 
   // User tự ẩn thông báo
-  @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'deleted_at', type: 'timestamptz', nullable: true })
   deletedAt: Date | null;
 }

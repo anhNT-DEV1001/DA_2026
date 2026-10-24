@@ -116,3 +116,21 @@ export class WorkspaceRequest extends PaginanteRequest {
   @IsBoolean()
   isStar?: boolean;
 }
+
+export default class WorkspaceSearch extends PaginanteRequest {
+  @ApiPropertyOptional({
+    example: '',
+    description: 'Từ khóa tìm kiếm theo tên hoặc slug hoặc mô tả',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({
+    example: 'WSM001',
+    description: 'Lọc theo chế độ workspace (mã master data nhóm WSM)',
+  })
+  @IsOptional()
+  @IsString()
+  mode?: string;
+}
