@@ -10,7 +10,11 @@ import { WebsocketProvider } from "@/providers/websocket-provider";
 
 import { ThemeProvider } from "@/providers/theme-provider";
 
-const roboto = Roboto({ subsets: ["latin"], variable: "--font-sans" });
+const roboto = Roboto({
+  subsets: ["latin", "vietnamese"],
+  weight: ["300", "400", "500", "700"],
+  variable: "--font-sans",
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -8,23 +8,23 @@ import {
   type Relation,
 } from 'typeorm';
 import { BaseEntity } from '../../../infrastructure/database/entites/base.entity.js';
-import { Workspace } from '../../workspaces/entities/workspace.entity.js';
+import { Space } from '../../workspaces/entities/space.entity.js';
 
 @Entity('task_statuses')
-@Unique('UQ_task_statuses_workspace_code', ['workspaceId', 'code'])
-@Unique('UQ_task_statuses_workspace_id', ['workspaceId', 'id'])
+@Unique('UQ_task_statuses_space_code', ['spaceId', 'code'])
+@Unique('UQ_task_statuses_space_id', ['spaceId', 'id'])
 @Check('CHK_task_statuses_name', `length(btrim("name")) > 0`)
 @Check('CHK_task_statuses_order', '"display_order" >= 0')
 export class TaskStatus extends BaseEntity {
-  @Column({ name: 'workspace_id', type: 'int' })
-  workspaceId: number;
+  @Column({ name: 'space_id', type: 'int' })
+  spaceId: number;
 
-  @ManyToOne(() => Workspace, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Space, { onDelete: 'CASCADE' })
   @JoinColumn({
-    name: 'workspace_id',
-    foreignKeyConstraintName: 'FK_task_statuses_workspace',
+    name: 'space_id',
+    foreignKeyConstraintName: 'FK_task_statuses_space',
   })
-  workspace: Relation<Workspace>;
+  space: Relation<Space>;
 
   @Column({ type: 'varchar', length: 50 })
   code: string;

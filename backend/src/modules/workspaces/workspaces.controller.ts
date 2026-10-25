@@ -28,6 +28,8 @@ import {
   UpdateWorkspaceMemberDto,
   WorkspaceMemberRequest,
   WorkspaceRequest,
+  AddSpaceMemberDto,
+  SpaceMemberRequest,
 } from './dtos/index.js';
 import WorkspaceSearch from './dtos/workspace.dto.js';
 import { WorkspaceGuard } from './guards/index.js';
@@ -35,6 +37,7 @@ import {
   WorkspaceMemberService,
   WorkspacesService,
   SpaceService,
+  SpaceMemberService,
 } from './services/index.js';
 
 @ApiTags('Workspaces')
@@ -45,6 +48,7 @@ export class WorkspacesController {
     private readonly workspacesService: WorkspacesService,
     private readonly workspaceMemberService: WorkspaceMemberService,
     private readonly spaceService: SpaceService,
+    private readonly spaceMemberService: SpaceMemberService,
   ) {}
 
   /* ========================================================================= */
@@ -297,6 +301,24 @@ export class WorkspacesController {
   /*                                Space APIs                                 */
   /* ========================================================================= */
 
+  @Get(':id/spaces/my')
+  @HasPermission('WORKSPACE_VIEW')
+  @ApiOperation({
+    summary: 'Lấy danh sách space mà người dùng hiện tại đang tham gia trong workspace',
+  })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
+  async getMySpacesInWorkspace(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('user') user: UserResponse,
+  ) {
+    return this.spaceMemberService.findMySpacesInWorkspace(id, user.id!);
+  }
+
   @Get(':id/spaces')
   @HasPermission('WORKSPACE_VIEW')
   @ApiOperation({ summary: 'Lấy danh sách space trong workspace' })
@@ -397,5 +419,114 @@ export class WorkspacesController {
     @CurrentUser('user') user?: UserResponse,
   ) {
     return this.spaceService.remove(id, spaceId, user);
+  }
+
+  /* ========================================================================= */
+  /*                            Space Members APIs                              */
+  /* ========================================================================= */
+
+  @Get(':id/spaces/:spaceId/members')
+  @HasPermission('WORKSPACE_VIEW')
+  @ApiOperation({ summary: 'Lấy danh sách thành viên trong space' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
+  @ApiParam({
+    name: 'spaceId',
+    example: 1,
+    type: Number,
+    description: 'ID space',
+  })
+  async getSpaceMembers(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('spaceId', ParseIntPipe) spaceId: number,
+    @Query() query: SpaceMemberRequest,
+  ) {
+    return this.spaceMemberService.findAll(id, spaceId, query);
+  }
+
+  @Get(':id/spaces/:spaceId/members/:memberId')
+  @HasPermission('WORKSPACE_VIEW')
+  @ApiOperation({ summary: 'Lấy chi tiết một thành viên trong space' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
+  @ApiParam({
+    name: 'spaceId',
+    example: 1,
+    type: Number,
+    description: 'ID space',
+  })
+  @ApiParam({
+    name: 'memberId',
+    example: 1,
+    type: Number,
+    description: 'ID workspace_member',
+  })
+  async getSpaceMemberDetail(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('spaceId', ParseIntPipe) spaceId: number,
+    @Param('memberId', ParseIntPipe) memberId: number,
+  ) {
+    return this.spaceMemberService.findOne(id, spaceId, memberId);
+  }
+
+  @Post(':id/spaces/:spaceId/members')
+  @HasPermission('WORKSPACE_CREATE')
+  @ApiOperation({ summary: 'Thêm thành viên workspace vào space' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
+  @ApiParam({
+    name: 'spaceId',
+    example: 1,
+    type: Number,
+    description: 'ID space',
+  })
+  async addSpaceMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('spaceId', ParseIntPipe) spaceId: number,
+    @Body() dto: AddSpaceMemberDto,
+    @CurrentUser('user') user?: UserResponse,
+  ) {
+    return this.spaceMemberService.addMember(id, spaceId, dto, user?.id);
+  }
+
+  @Delete(':id/spaces/:spaceId/members/:memberId')
+  @HasPermission('WORKSPACE_DELETE')
+  @ApiOperation({ summary: 'Xóa thành viên khỏi space' })
+  @ApiParam({
+    name: 'id',
+    example: 1,
+    type: Number,
+    description: 'ID workspace',
+  })
+  @ApiParam({
+    name: 'spaceId',
+    example: 1,
+    type: Number,
+    description: 'ID space',
+  })
+  @ApiParam({
+    name: 'memberId',
+    example: 1,
+    type: Number,
+    description: 'ID workspace_member',
+  })
+  async removeSpaceMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('spaceId', ParseIntPipe) spaceId: number,
+    @Param('memberId', ParseIntPipe) memberId: number,
+  ) {
+    return this.spaceMemberService.removeMember(id, spaceId, memberId);
   }
 }

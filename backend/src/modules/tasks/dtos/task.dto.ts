@@ -1,9 +1,11 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
   Max,
@@ -15,7 +17,72 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import type { TaskPriority } from '../entities/task.entity.js';
 import { PaginanteRequest } from '../../../common/requests/paginate.request.js';
 
+export class CreateTaskStatusDto {
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  spaceId: number;
+
+  @ApiProperty({ example: 'in_review', maxLength: 50 })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code: string;
+
+  @ApiProperty({ example: 'Chờ kiểm tra', maxLength: 100 })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  name: string;
+
+  @ApiPropertyOptional({ default: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  displayOrder?: number;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isCompleted?: boolean;
+}
+
+export class UpdateTaskStatusDto {
+  @ApiPropertyOptional({ example: 'Đang xem xét', maxLength: 100 })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  displayOrder?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isCompleted?: boolean;
+}
+
+export class AssignTaskDto {
+  @ApiProperty({ description: 'ID của người dùng cần assign vào task' })
+  @IsInt()
+  @Min(1)
+  userId: number;
+}
+
 export class CreateTaskDto {
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  spaceId: number;
+
   @ApiProperty()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
@@ -30,18 +97,12 @@ export class CreateTaskDto {
   description?: string | null;
 
   @ApiPropertyOptional({
-    description: 'Mặc định: trạng thái todo của workspace',
+    description: 'Mặc định: trạng thái todo của space',
   })
   @ValidateIf((_, value) => value !== undefined)
   @IsInt()
   @Min(1)
   statusId?: number;
-
-  @ApiPropertyOptional({ type: Number, nullable: true })
-  @ValidateIf((_, value) => value !== undefined && value !== null)
-  @IsInt()
-  @Min(1)
-  assigneeId?: number | null;
 
   @ApiPropertyOptional({
     enum: ['low', 'medium', 'high', 'urgent'],
@@ -108,13 +169,6 @@ export class TaskListQuery extends TaskPageQuery {
   @IsInt()
   @Min(1)
   statusId?: number;
-
-  @ApiPropertyOptional()
-  @ValidateIf((_, value) => value !== undefined)
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  assigneeId?: number;
 
   @ApiPropertyOptional({ enum: ['low', 'medium', 'high', 'urgent'] })
   @ValidateIf((_, value) => value !== undefined)

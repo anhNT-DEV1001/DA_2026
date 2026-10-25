@@ -8,3 +8,4 @@ export * from "./workspace-members/workspace-member-detail";
 export * from "./spaces/space-detail";
 export * from "./spaces/space-filter";
 export * from "./spaces/space-table";
+export * from "./spaces/space-member-join";

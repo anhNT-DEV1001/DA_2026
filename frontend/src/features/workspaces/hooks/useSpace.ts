@@ -1,8 +1,9 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React from "react";
+import { useMutation, useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import { workspaceService } from "../services";
-import type { CreateSpaceDto, SpaceQueryParams, UpdateSpaceDto } from "../types";
+import type { CreateSpaceDto, SpaceItem, SpaceQueryParams, UpdateSpaceDto } from "../types";
 
 export const SPACE_QUERY_KEYS = {
   all: (workspaceId: number) => ["workspaces", workspaceId, "spaces"] as const,
@@ -10,11 +11,52 @@ export const SPACE_QUERY_KEYS = {
     [...SPACE_QUERY_KEYS.all(workspaceId), "list"] as const,
   list: (workspaceId: number, params?: SpaceQueryParams) =>
     [...SPACE_QUERY_KEYS.lists(workspaceId), params] as const,
+  my: (workspaceId: number) =>
+    [...SPACE_QUERY_KEYS.all(workspaceId), "my"] as const,
   details: (workspaceId: number) =>
     [...SPACE_QUERY_KEYS.all(workspaceId), "detail"] as const,
   detail: (workspaceId: number, spaceId: number) =>
     [...SPACE_QUERY_KEYS.details(workspaceId), spaceId] as const,
 };
+
+/**
+ * Hook lấy danh sách spaces mà user hiện tại đang tham gia trong một workspace
+ */
+export function useMySpacesInWorkspace(workspaceId: number) {
+  return useQuery({
+    queryKey: SPACE_QUERY_KEYS.my(workspaceId),
+    queryFn: () => workspaceService.getMySpacesInWorkspace(workspaceId),
+    enabled: workspaceId > 0,
+  });
+}
+
+/**
+ * Hook lấy spaces mà user đang tham gia cho nhiều workspaces song song.
+ * Trả về object ổn định (stable reference) — chỉ thay đổi khi data thực sự thay đổi.
+ */
+export function useMySpacesForWorkspaces(workspaceIds: number[]) {
+  const results = useQueries({
+    queries: workspaceIds.map((id) => ({
+      queryKey: SPACE_QUERY_KEYS.my(id),
+      queryFn: () => workspaceService.getMySpacesInWorkspace(id),
+      enabled: id > 0,
+    })),
+  });
+
+  // Serialize data để làm dep key ổn định, tránh tạo object mới mỗi render
+  const dataKey = results.map((r) => r.dataUpdatedAt).join(",");
+  const idsKey = workspaceIds.join(",");
+
+  return React.useMemo(
+    () =>
+      results.reduce<Record<number, SpaceItem[]>>((acc, result, index) => {
+        acc[workspaceIds[index]] = result.data ?? [];
+        return acc;
+      }, {}),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dataKey, idsKey],
+  );
+}
 
 /**
  * Hook lấy danh sách space trong một workspace

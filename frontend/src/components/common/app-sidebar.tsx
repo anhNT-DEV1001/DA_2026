@@ -38,15 +38,18 @@ import { type Permission } from "@/features/auth";
 import { MenuIcon, useSidebarMenus, type MenuItem } from "@/features/menus";
 import {
   useMyWorkspaces,
+  useMySpacesForWorkspaces,
   workspaceService,
   WORKSPACE_QUERY_KEYS,
   WorkspaceDetailModal,
   type WorkspaceItem,
+  type SpaceItem,
 } from "@/features/workspaces";
 import { useAuthStore } from "@/stores/auth-store";
 
 export type ExtendedMenuItem = MenuItem & {
   rawWorkspace?: WorkspaceItem;
+  rawSpace?: SpaceItem;
 };
 
 const VIEW_PERMISSION_ACTION = "ACTION001";
@@ -95,31 +98,50 @@ function isWorkspaceMenuItem(item: MenuItem): boolean {
 }
 
 /**
- * Tích hợp danh sách workspace của user thành menu con của menu Workspace
+ * Tích hợp danh sách workspace của user thành menu con của menu Workspace,
+ * đồng thời tích hợp các spaces mà user tham gia như menu con của mỗi workspace
  */
 function enrichMenusWithWorkspaces(
   menus: MenuItem[],
   workspaces: WorkspaceItem[],
+  spacesMap: Record<number, SpaceItem[]> = {},
 ): ExtendedMenuItem[] {
   return menus.map((menu) => {
     const isWorkspace = isWorkspaceMenuItem(menu);
 
     if (isWorkspace) {
-      const workspaceSubItems: ExtendedMenuItem[] = workspaces.map((ws) => ({
-        id: 100000 + ws.id,
-        name: ws.name,
-        route: `/workspaces/${ws.slug || ws.id}`,
-        icon: ws.mode === "public" ? "Globe" : "Folder",
-        alias: `workspace_${ws.slug || ws.id}`,
-        parentId: menu.id,
-        displayOrder: 0,
-        isSideBarDisplay: true,
-        isActive: true,
-        rawWorkspace: ws,
-      }));
+      const workspaceSubItems: ExtendedMenuItem[] = workspaces.map((ws) => {
+        const spaces = spacesMap[ws.id] ?? [];
+        const spaceSubItems: ExtendedMenuItem[] = spaces.map((space) => ({
+          id: 200000 + space.id,
+          name: space.name,
+          route: `/workspaces/${ws.slug || ws.id}/spaces/${space.id}`,
+          icon: "LayoutList",
+          alias: `space_${ws.slug || ws.id}_${space.id}`,
+          parentId: 100000 + ws.id,
+          displayOrder: space.displayOrder ?? 0,
+          isSideBarDisplay: true,
+          isActive: true,
+          rawSpace: space,
+        }));
+
+        return {
+          id: 100000 + ws.id,
+          name: ws.name,
+          route: `/workspaces/${ws.slug || ws.id}`,
+          icon: ws.mode === "public" ? "Globe" : "Folder",
+          alias: `workspace_${ws.slug || ws.id}`,
+          parentId: menu.id,
+          displayOrder: 0,
+          isSideBarDisplay: true,
+          isActive: true,
+          rawWorkspace: ws,
+          children: spaceSubItems,
+        } satisfies ExtendedMenuItem;
+      });
 
       const existingChildren = menu.children
-        ? enrichMenusWithWorkspaces(menu.children, workspaces)
+        ? enrichMenusWithWorkspaces(menu.children, workspaces, spacesMap)
         : [];
 
       return {
@@ -131,7 +153,7 @@ function enrichMenusWithWorkspaces(
     if (menu.children && menu.children.length > 0) {
       return {
         ...menu,
-        children: enrichMenusWithWorkspaces(menu.children, workspaces),
+        children: enrichMenusWithWorkspaces(menu.children, workspaces, spacesMap),
       };
     }
 
@@ -497,7 +519,11 @@ function MobileTreeSidebar({
     };
     findActiveAncestors(menus);
     if (activeIds.size > 0) {
-      setExpandedIds((prev) => new Set([...prev, ...activeIds]));
+      setExpandedIds((prev) => {
+        const hasNew = [...activeIds].some((id) => !prev.has(id));
+        if (!hasNew) return prev;
+        return new Set([...prev, ...activeIds]);
+      });
     }
   }, [menus, pathname]);
 
@@ -547,7 +573,11 @@ function MobileTreeSidebar({
         matchingIds.add(item.id);
       }
     });
-    setExpandedIds((prev) => new Set([...prev, ...matchingIds]));
+    setExpandedIds((prev) => {
+      const hasNew = [...matchingIds].some((id) => !prev.has(id));
+      if (!hasNew) return prev;
+      return new Set([...prev, ...matchingIds]);
+    });
   }, [searchTerm, menus]);
 
   return (
@@ -647,6 +677,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: myWorkspaces = [], isLoading: isLoadingWorkspaces } =
     useMyWorkspaces();
 
+  const workspaceIds = React.useMemo(
+    () => myWorkspaces.map((ws) => ws.id),
+    [myWorkspaces],
+  );
+  const spacesMap = useMySpacesForWorkspaces(workspaceIds);
+
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] =
     React.useState(false);
   const [workspaceToDelete, setWorkspaceToDelete] =
@@ -662,14 +698,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     Set<number>
   >(new Set());
 
-  // Lọc các menu mà user (me) có quyền xem (ACTION001), sau đó tích hợp workspace
+  // Lọc các menu mà user (me) có quyền xem (ACTION001), sau đó tích hợp workspace + spaces
   const sidebarMenus = React.useMemo(() => {
     const permittedMenus = filterMenusByViewPermission(
       rawSidebarMenus,
       permissions,
     );
-    return enrichMenusWithWorkspaces(permittedMenus, myWorkspaces);
-  }, [rawSidebarMenus, permissions, myWorkspaces]);
+    return enrichMenusWithWorkspaces(permittedMenus, myWorkspaces, spacesMap);
+  }, [rawSidebarMenus, permissions, myWorkspaces, spacesMap]);
 
   const isLoading =
     isLoadingMenus || isLoadingWorkspaces || !isAuthInitialized;
@@ -784,7 +820,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     };
     findActiveAncestors(subMenus);
     if (activeIds.size > 0) {
-      setDesktopExpandedIds((prev) => new Set([...prev, ...activeIds]));
+      setDesktopExpandedIds((prev) => {
+        const hasNew = [...activeIds].some((id) => !prev.has(id));
+        if (!hasNew) return prev;
+        return new Set([...prev, ...activeIds]);
+      });
     }
   }, [subMenus, pathname]);
 
@@ -829,7 +869,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       });
     };
     findMatchingNodes(subMenus);
-    setDesktopExpandedIds((prev) => new Set([...prev, ...matchingIds]));
+    setDesktopExpandedIds((prev) => {
+      const hasNew = [...matchingIds].some((id) => !prev.has(id));
+      if (!hasNew) return prev;
+      return new Set([...prev, ...matchingIds]);
+    });
   }, [searchTerm, subMenus]);
 
   return (

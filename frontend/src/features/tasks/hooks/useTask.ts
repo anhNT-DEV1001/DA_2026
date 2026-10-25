@@ -35,13 +35,27 @@ export function useTaskList(
 
 export function useTaskStatuses(
   workspaceId: number,
-  scope: Scope,
+  spaceIdOrScope: number | Scope,
+  scopeOrEnabled?: Scope | boolean,
   enabled = true,
 ) {
+  // Overload: (workspaceId, scope, enabled?) — legacy callers without spaceId
+  // Overload: (workspaceId, spaceId, scope, enabled?)
+  const hasSpaceId = typeof spaceIdOrScope === "number";
+  const spaceId = hasSpaceId ? (spaceIdOrScope as number) : 0;
+  const scope = hasSpaceId
+    ? (scopeOrEnabled as Scope)
+    : (spaceIdOrScope as Scope);
+  const isEnabled = hasSpaceId
+    ? enabled
+    : typeof scopeOrEnabled === "boolean"
+      ? scopeOrEnabled
+      : true;
+
   return useQuery({
     queryKey: TASK_QUERY_KEYS.statuses(scope),
-    queryFn: () => taskService.statuses(workspaceId),
-    enabled,
+    queryFn: () => taskService.statuses(workspaceId, spaceId),
+    enabled: isEnabled && hasSpaceId,
   });
 }
 

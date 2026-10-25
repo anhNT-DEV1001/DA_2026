@@ -18,6 +18,11 @@ import type {
   WorkspaceMemberQueryParams,
   WorkspaceQueryParams,
   WorkspaceSearchParams,
+  AddSpaceMemberDto,
+  DeleteSpaceMemberResponse,
+  PaginatedSpaceMemberResponse,
+  SpaceMemberItem,
+  SpaceMemberQueryParams,
 } from "../types";
 
 export const workspaceService = {
@@ -237,6 +242,16 @@ export const workspaceService = {
   },
 
   /**
+   * Lấy danh sách space mà người dùng hiện tại đang tham gia trong workspace
+   * GET /workspaces/:id/spaces/my
+   */
+  getMySpacesInWorkspace: async (workspaceId: number): Promise<SpaceItem[]> => {
+    return apiClient.get<unknown, SpaceItem[]>(
+      `/workspaces/${workspaceId}/spaces/my`,
+    );
+  },
+
+  /**
    * Tạo mới space trong workspace
    * POST /workspaces/:id/spaces
    */
@@ -277,6 +292,68 @@ export const workspaceService = {
       `/workspaces/${workspaceId}/spaces/${spaceId}`,
     );
   },
+
+  /* ========================================================================= */
+  /*                            Space Members APIs                              */
+  /* ========================================================================= */
+
+  /**
+   * Lấy danh sách thành viên trong space (hỗ trợ tìm kiếm và phân trang)
+   * GET /workspaces/:id/spaces/:spaceId/members
+   */
+  getSpaceMembers: async (
+    workspaceId: number,
+    spaceId: number,
+    params?: SpaceMemberQueryParams,
+  ): Promise<PaginatedSpaceMemberResponse | SpaceMemberItem[]> => {
+    return apiClient.get<
+      unknown,
+      PaginatedSpaceMemberResponse | SpaceMemberItem[]
+    >(`/workspaces/${workspaceId}/spaces/${spaceId}/members`, { params });
+  },
+
+  /**
+   * Lấy chi tiết một thành viên trong space
+   * GET /workspaces/:id/spaces/:spaceId/members/:memberId
+   */
+  getSpaceMemberDetail: async (
+    workspaceId: number,
+    spaceId: number,
+    memberId: number,
+  ): Promise<SpaceMemberItem> => {
+    return apiClient.get<unknown, SpaceMemberItem>(
+      `/workspaces/${workspaceId}/spaces/${spaceId}/members/${memberId}`,
+    );
+  },
+
+  /**
+   * Thêm thành viên workspace vào space
+   * POST /workspaces/:id/spaces/:spaceId/members
+   */
+  addSpaceMember: async (
+    workspaceId: number,
+    spaceId: number,
+    dto: AddSpaceMemberDto,
+  ): Promise<SpaceMemberItem> => {
+    return apiClient.post<unknown, SpaceMemberItem>(
+      `/workspaces/${workspaceId}/spaces/${spaceId}/members`,
+      dto,
+    );
+  },
+
+  /**
+   * Xóa thành viên khỏi space
+   * DELETE /workspaces/:id/spaces/:spaceId/members/:memberId
+   */
+  removeSpaceMember: async (
+    workspaceId: number,
+    spaceId: number,
+    memberId: number,
+  ): Promise<DeleteSpaceMemberResponse> => {
+    return apiClient.delete<unknown, DeleteSpaceMemberResponse>(
+      `/workspaces/${workspaceId}/spaces/${spaceId}/members/${memberId}`,
+    );
+  },
 };
 
 /**
@@ -290,4 +367,14 @@ export const workspaceMemberService = {
   removeMember: workspaceService.removeMember,
   approveMember: workspaceService.approveMember,
   rejectMember: workspaceService.rejectMember,
+};
+
+/**
+ * Service alias dành riêng cho các API quản lý thành viên Space
+ */
+export const spaceMemberService = {
+  getSpaceMembers: workspaceService.getSpaceMembers,
+  getSpaceMemberDetail: workspaceService.getSpaceMemberDetail,
+  addSpaceMember: workspaceService.addSpaceMember,
+  removeSpaceMember: workspaceService.removeSpaceMember,
 };

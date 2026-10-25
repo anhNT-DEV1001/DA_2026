@@ -18,7 +18,6 @@ import {
   PageResponse,
 } from '../../../common/responses/index.js';
 import { slugify } from '../utils/slug.util.js';
-import { TaskStatusService } from '../../tasks/task-status.service.js';
 import WorkspaceSearch from '../dtos/workspace.dto.js';
 
 @Injectable()
@@ -29,7 +28,6 @@ export class WorkspacesService {
     @InjectRepository(WorkspaceMember)
     private readonly memberRepo: Repository<WorkspaceMember>,
     private readonly dataSource: DataSource,
-    private readonly taskStatusService: TaskStatusService,
   ) {}
 
   private attachModeName(ws: Workspace): Workspace {
@@ -296,12 +294,6 @@ export class WorkspacesService {
         await transactionalEntityManager.save(
           WorkspaceMember,
           workspaceMemData,
-        );
-
-        await this.taskStatusService.ensureDefaultStatuses(
-          transactionalEntityManager,
-          workspace.id,
-          user?.id ?? null,
         );
 
         return workspace;

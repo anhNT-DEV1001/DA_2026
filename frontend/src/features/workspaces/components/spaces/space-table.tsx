@@ -6,12 +6,40 @@ import { Modal } from "@/components/common/modal";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { useAuthStore } from "@/stores/auth-store";
-import { useSpace, useSpaceList } from "../../hooks";
+import { useSpace, useSpaceList, useSpaceMemberList } from "../../hooks";
 import type { SpaceItem, SpaceQueryParams } from "../../types";
 import { SpaceDetailModal } from "./space-detail";
+import { SpaceMemberJoinModal } from "./space-member-join";
 import { SpaceFilter } from "./space-filter";
-import { Calendar, FolderOpen, Pencil, Trash2 } from "lucide-react";
+import { Calendar, FolderOpen, Loader2, Pencil, Trash2, UserPlus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/** Hiển thị số thành viên đã tham gia space */
+function SpaceMemberCountBadge({
+  workspaceId,
+  spaceId,
+}: {
+  workspaceId: number;
+  spaceId: number;
+}) {
+  const { data, isLoading } = useSpaceMemberList(workspaceId, spaceId, {
+    page: 1,
+    limit: 1,
+  });
+
+  if (isLoading) {
+    return <Loader2 className="size-3 animate-spin text-muted-foreground/50" />;
+  }
+
+  const count = Array.isArray(data) ? data.length : (data?.meta?.itemCount ?? 0);
+
+  return (
+    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-muted/60 text-muted-foreground border border-border/50">
+      <Users className="size-3 shrink-0" />
+      <span>{count}</span>
+    </div>
+  );
+}
 
 export interface SpaceTableProps {
   workspaceId: number;
@@ -56,9 +84,8 @@ export function SpaceTable({ workspaceId, className }: SpaceTableProps) {
     limit: 10,
   });
   const [spaceToEdit, setSpaceToEdit] = React.useState<SpaceItem | null>(null);
-  const [spaceToDelete, setSpaceToDelete] = React.useState<SpaceItem | null>(
-    null,
-  );
+  const [spaceToDelete, setSpaceToDelete] = React.useState<SpaceItem | null>(null);
+  const [spaceForMember, setSpaceForMember] = React.useState<SpaceItem | null>(null);
 
   const { data: queryData, isLoading } = useSpaceList(workspaceId, params);
   const { deleteSpace, isDeleting } = useSpace(workspaceId);
@@ -146,6 +173,18 @@ export function SpaceTable({ workspaceId, className }: SpaceTableProps) {
         ),
       },
       {
+        id: "memberCount",
+        header: "Thành viên",
+        align: "center",
+        width: 110,
+        cell: ({ row }) => (
+          <SpaceMemberCountBadge
+            workspaceId={workspaceId}
+            spaceId={row.id}
+          />
+        ),
+      },
+      {
         id: "createdAt",
         header: "Ngày tạo",
         accessorKey: "createdAt",
@@ -161,9 +200,21 @@ export function SpaceTable({ workspaceId, className }: SpaceTableProps) {
         id: "actions",
         header: "Thao tác",
         align: "right",
-        width: 90,
+        width: 110,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="size-7 hover:bg-primary/10 text-muted-foreground hover:text-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSpaceForMember(row);
+              }}
+              title="Thêm thành viên vào space"
+            >
+              <UserPlus className="size-3.5" />
+            </Button>
             {canUpdate && (
               <Button
                 variant="ghost"
@@ -197,7 +248,7 @@ export function SpaceTable({ workspaceId, className }: SpaceTableProps) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, pageSize, canUpdate, canDelete],
+    [page, pageSize, canUpdate, canDelete, setSpaceForMember],
   );
 
   return (
@@ -263,6 +314,22 @@ export function SpaceTable({ workspaceId, className }: SpaceTableProps) {
           }}
           space={spaceToEdit}
           onSuccess={() => setSpaceToEdit(null)}
+        />
+      )}
+
+      {/* Modal thêm thành viên vào space */}
+      {spaceForMember && (
+        <SpaceMemberJoinModal
+          workspaceId={workspaceId}
+          spaceId={spaceForMember.id}
+          spaceName={spaceForMember.name}
+          open={Boolean(spaceForMember)}
+          onOpenChange={(open) => {
+            if (!open) setSpaceForMember(null);
+          }}
+          onSuccess={() => {
+            // Không đóng modal, để user có thể thêm nhiều người cùng lúc
+          }}
         />
       )}
     </div>

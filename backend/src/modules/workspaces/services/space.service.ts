@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { DataSource, ILike, Repository } from 'typeorm';
 import { Space } from '../entities/space.entity.js';
 import {
   CreateSpaceDto,
@@ -16,12 +16,15 @@ import {
   PageMetadataResponse,
   PageResponse,
 } from '../../../common/responses/index.js';
+import { TaskStatusService } from '../../tasks/services/task-status.service.js';
 
 @Injectable()
 export class SpaceService {
   constructor(
     @InjectRepository(Space)
     private readonly spaceRepo: Repository<Space>,
+    private readonly dataSource: DataSource,
+    private readonly taskStatusService: TaskStatusService,
   ) {}
 
   async findAll(
@@ -77,16 +80,23 @@ export class SpaceService {
       );
     }
 
-    const space = this.spaceRepo.create({
-      name: dto.name.trim(),
-      description: dto.description?.trim() ?? null,
-      displayOrder: dto.displayOrder ?? 1,
-      workspaceId,
-      createdBy: user?.id ?? null,
-      updatedBy: user?.id ?? null,
+    return this.dataSource.transaction(async (manager) => {
+      const space = manager.getRepository(Space).create({
+        name: dto.name.trim(),
+        description: dto.description?.trim() ?? null,
+        displayOrder: dto.displayOrder ?? 1,
+        workspaceId,
+        createdBy: user?.id ?? null,
+        updatedBy: user?.id ?? null,
+      });
+      await manager.getRepository(Space).save(space);
+      await this.taskStatusService.ensureDefaultStatuses(
+        manager,
+        space.id,
+        user?.id ?? null,
+      );
+      return space;
     });
-
-    return this.spaceRepo.save(space);
   }
 
   async update(
