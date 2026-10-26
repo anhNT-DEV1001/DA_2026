@@ -83,7 +83,7 @@ CROSS JOIN (VALUES
     ('ACTION004', 'DELETE')
 ) AS a(action, suffix)
 JOIN "master_data" md ON md."group" = 'ACTION' AND md.value = a.action AND md.deleted_at IS NULL
-WHERE m.alias IN ('ListMenus', 'MasterData', 'RoleGroup', 'Users', 'Workspace')
+WHERE m.alias IN ('ListMenus', 'MasterData', 'RoleGroup', 'Users', 'Workspace', 'Note')
    OR (m.alias IN ('HomePage', 'System') AND a.suffix = 'VIEW')
 ON CONFLICT ("code") DO NOTHING;
 

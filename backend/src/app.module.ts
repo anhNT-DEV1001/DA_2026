@@ -17,6 +17,7 @@ import { throttlerConfig } from './config/throttler.config.js';
 import { TasksModule } from './modules/tasks/tasks.module.js';
 import { WebsocketModule } from './infrastructure/websockets/websocket.module.js';
 import { NotificationModule } from './modules/notifications/notification.module.js';
+import { NotesModule } from './modules/notes/notes.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -43,6 +44,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     WorkspacesModule,
     TasksModule,
     NotificationModule,
+    NotesModule,
   ],
   controllers: [AppController],
   providers: [
