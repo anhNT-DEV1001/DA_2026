@@ -128,3 +128,59 @@
     @apply font-sans;
   }
 }
+/* Trình soạn thảo ghi chú (Tiptap) - features/notes */
+@layer components {
+  .sticky-editor p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    @apply text-foreground/40;
+  }
+
+  .sticky-editor ul:not([data-type="taskList"]) {
+    @apply list-disc pl-5;
+  }
+
+  .sticky-editor ol {
+    @apply list-decimal pl-5;
+  }
+
+  .sticky-editor ul[data-type="taskList"] {
+    @apply list-none pl-0;
+  }
+
+  .sticky-editor ul[data-type="taskList"] ul[data-type="taskList"] {
+    @apply pl-5;
+  }
+
+  .sticky-editor ul[data-type="taskList"] li {
+    @apply flex items-start gap-2;
+  }
+
+  .sticky-editor ul[data-type="taskList"] li > label {
+    @apply mt-[0.3em] select-none;
+  }
+
+  .sticky-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
+    @apply size-3.5 cursor-pointer accent-foreground;
+  }
+
+  .sticky-editor ul[data-type="taskList"] li > div {
+    @apply min-w-0 flex-1;
+  }
+
+  .sticky-editor ul[data-type="taskList"] li[data-checked="true"] > div {
+    @apply text-foreground/50 line-through;
+  }
+}
+
+/* Thanh đếm ngược của toast (components/ui/toast.tsx - ToastProgress) */
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

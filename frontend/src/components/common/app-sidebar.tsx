@@ -17,10 +17,12 @@ import { cn } from "cn";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/common/modal";
+import { QuickTools } from "@/components/common/quick-tools";
 import { toast } from "@/components/ui/toast";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -982,6 +984,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarGroupContent>
                 </SidebarGroup>
               </SidebarContent>
+
+              {/* Thanh công cụ nhanh: Ghi chú, AI... */}
+              <SidebarFooter className="items-center pb-4">
+                <QuickTools />
+              </SidebarFooter>
             </Sidebar>
 
             {/* Sidebar 2: Sub-sidebar hiển thị menu con đa cấp dạng Tree view & ô tìm kiếm */}

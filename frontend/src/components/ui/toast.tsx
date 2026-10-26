@@ -69,7 +69,7 @@ function ToastContent({ className, ...props }: ToastPrimitive.Content.Props) {
     <ToastPrimitive.Content
       data-slot="toast-content"
       className={cn(
-        "flex h-full items-center gap-3 overflow-hidden p-4 transition-opacity duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-behind:opacity-0 data-expanded:opacity-100",
+        "relative flex h-full items-center gap-3 overflow-hidden rounded-[inherit] p-4 transition-opacity duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-behind:opacity-0 data-expanded:opacity-100",
         className,
       )}
       {...props}
@@ -199,6 +199,39 @@ function ToastIcon({ type }: { type: string | undefined }) {
   );
 }
 
+/**
+ * Thanh đếm ngược thời gian tự đóng ở mép dưới toast.
+ * Chỉ hiển thị khi tạo toast với `data: { showProgress: true }`.
+ * Tạm dừng cùng lúc với timer của Base UI khi rê chuột / focus (data-expanded).
+ */
+function ToastProgress({
+  toast: toastItem,
+}: {
+  toast: ToastPrimitive.Root.ToastObject;
+}) {
+  const timeout = toastItem.timeout ?? 5000;
+  if (!toastItem.data?.showProgress || timeout <= 0) {
+    return null;
+  }
+
+  return (
+    <span
+      // Reset animation khi toast được cập nhật lại (upsert)
+      key={toastItem.updateKey}
+      aria-hidden="true"
+      data-slot="toast-progress"
+      className={cn(
+        "pointer-events-none absolute inset-x-0 bottom-0 h-1 origin-left bg-primary animate-[toast-progress_linear_forwards] group-data-expanded/toast:[animation-play-state:paused]",
+        toastItem.type === "success" && "bg-emerald-500",
+        toastItem.type === "error" && "bg-red-500",
+        toastItem.type === "warning" && "bg-amber-500",
+        toastItem.type === "info" && "bg-blue-500",
+      )}
+      style={{ animationDuration: `${timeout}ms` }}
+    />
+  );
+}
+
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager();
 
@@ -259,6 +292,7 @@ function ToastList() {
                 "text-blue-700 hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-900/50",
             )}
           />
+          <ToastProgress toast={toastItem} />
         </ToastContent>
       </Toast>
     );
