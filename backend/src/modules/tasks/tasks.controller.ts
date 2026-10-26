@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -40,7 +41,7 @@ export class TasksController {
   @HasPermission('WORKSPACE_VIEW')
   statuses(
     @Param('workspaceId', ParseIntPipe) workspaceId: number,
-    @Query('spaceId', ParseIntPipe) spaceId: number,
+    @Query('spaceId', new ParseIntPipe({ exceptionFactory: () => new BadRequestException('spaceId là bắt buộc và phải là số nguyên dương') })) spaceId: number,
   ) {
     return this.taskStatuses.list(workspaceId, spaceId);
   }
@@ -60,7 +61,7 @@ export class TasksController {
   updateStatus(
     @Param('workspaceId', ParseIntPipe) workspaceId: number,
     @Param('statusId', ParseIntPipe) statusId: number,
-    @Query('spaceId', ParseIntPipe) spaceId: number,
+    @Query('spaceId', new ParseIntPipe({ exceptionFactory: () => new BadRequestException('spaceId là bắt buộc và phải là số nguyên dương') })) spaceId: number,
     @CurrentUser('user') user: UserResponse,
     @Body() dto: UpdateTaskStatusDto,
   ) {
@@ -73,7 +74,7 @@ export class TasksController {
   removeStatus(
     @Param('workspaceId', ParseIntPipe) workspaceId: number,
     @Param('statusId', ParseIntPipe) statusId: number,
-    @Query('spaceId', ParseIntPipe) spaceId: number,
+    @Query('spaceId', new ParseIntPipe({ exceptionFactory: () => new BadRequestException('spaceId là bắt buộc và phải là số nguyên dương') })) spaceId: number,
   ) {
     return this.taskStatuses.remove(workspaceId, spaceId, statusId);
   }
@@ -175,6 +176,7 @@ export class TasksController {
 
   @Delete(':taskId')
   @HasPermission('WORKSPACE_DELETE')
+  @HttpCode(200)
   remove(
     @Param('workspaceId', ParseIntPipe) workspaceId: number,
     @Param('taskId', ParseIntPipe) taskId: number,

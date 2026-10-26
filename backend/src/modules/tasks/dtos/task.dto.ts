@@ -145,6 +145,13 @@ export class TaskPageQuery extends PaginanteRequest {
 }
 
 export class TaskListQuery extends TaskPageQuery {
+  @ApiPropertyOptional({ description: 'Lọc theo space' })
+  @ValidateIf((_, value) => value !== undefined)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  spaceId?: number;
+
   @ApiPropertyOptional({ example: '2026-10-01' })
   @ValidateIf((_, value) => value !== undefined)
   @Matches(/^\d{4}-\d{2}-\d{2}$/)

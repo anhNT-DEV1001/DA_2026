@@ -11,12 +11,16 @@ import { Task } from '../entities/task.entity.js';
 import { Workspace } from '../../workspaces/entities/workspace.entity.js';
 import { WorkspaceMember } from '../../workspaces/entities/workspace-member.entity.js';
 import { AssignTaskDto } from '../dtos/task.dto.js';
+import { TaskActivityService } from './task-activity.service.js';
 
 const activeStatuses = ['MS001', 'active'];
 
 @Injectable()
 export class TaskAssignedService {
-  constructor(private readonly source: DataSource) {}
+  constructor(
+    private readonly source: DataSource,
+    private readonly activity: TaskActivityService,
+  ) {}
 
   private async assertWorkspaceMember(
     manager: EntityManager,
@@ -44,10 +48,14 @@ export class TaskAssignedService {
     manager: EntityManager,
     workspaceId: number,
     taskId: number,
+    lock = false,
   ): Promise<Task> {
     const task = await manager
       .getRepository(Task)
-      .findOne({ select: { id: true, workspaceId: true }, where: { id: taskId, workspaceId } });
+      .findOne({
+        where: { id: taskId, workspaceId },
+        ...(lock ? { lock: { mode: 'pessimistic_write' as const } } : {}),
+      });
     if (!task) throw new NotFoundException('Không tìm thấy task trong workspace');
     return task;
   }
@@ -70,9 +78,8 @@ export class TaskAssignedService {
   ) {
     return this.source.transaction(async (manager) => {
       await this.assertWorkspaceMember(manager, workspaceId, actorId);
-      await this.resolveTask(manager, workspaceId, taskId);
+      const task = await this.resolveTask(manager, workspaceId, taskId, true);
 
-      // Target user must also be a workspace member
       await this.assertWorkspaceMember(
         manager,
         workspaceId,
@@ -80,9 +87,7 @@ export class TaskAssignedService {
         'Người dùng được assign',
       );
 
-      if (dto.userId === actorId) {
-        // Self-assign: assignedBy = null by convention
-      }
+      const before = await this.activity.snapshot(manager, task);
 
       const record = manager.getRepository(TaskAssigned).create({
         taskId,
@@ -93,7 +98,7 @@ export class TaskAssignedService {
       });
 
       try {
-        return await manager.getRepository(TaskAssigned).save(record);
+        await manager.getRepository(TaskAssigned).save(record);
       } catch (err) {
         if (
           err instanceof QueryFailedError &&
@@ -103,6 +108,10 @@ export class TaskAssignedService {
         }
         throw err;
       }
+
+      const after = await this.activity.snapshot(manager, task);
+      await this.activity.record(manager, task, actorId, 'updated', before, after);
+      return record;
     });
   }
 
@@ -114,12 +123,7 @@ export class TaskAssignedService {
   ) {
     return this.source.transaction(async (manager) => {
       await this.assertWorkspaceMember(manager, workspaceId, actorId);
-      await this.resolveTask(manager, workspaceId, taskId);
-
-      if (targetUserId !== actorId) {
-        // Only workspace members can unassign others; actor check already done above.
-        // Additional role-based check can go here if needed.
-      }
+      const task = await this.resolveTask(manager, workspaceId, taskId, true);
 
       const record = await manager
         .getRepository(TaskAssigned)
@@ -128,7 +132,11 @@ export class TaskAssignedService {
       if (!record)
         throw new NotFoundException('Người dùng chưa được assign vào task này');
 
+      const before = await this.activity.snapshot(manager, task);
       await manager.getRepository(TaskAssigned).remove(record);
+      const after = await this.activity.snapshot(manager, task);
+      await this.activity.record(manager, task, actorId, 'updated', before, after);
+
       return { taskId, userId: targetUserId };
     });
   }

@@ -3,6 +3,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { TaskActivity } from '../entities/task-activity.entity.js';
 import { Task } from '../entities/task.entity.js';
 import { TaskAssigned } from '../entities/task-assigned.entity.js';
+import { TaskStatus } from '../entities/task-status.entity.js';
 import { TaskPageQuery } from '../dtos/task.dto.js';
 import {
   PageMetadataResponse,
@@ -42,12 +43,9 @@ export class TaskActivityService {
       opts?.statusName !== undefined
         ? opts.statusName
         : await manager
-            .getRepository('task_statuses')
-            .createQueryBuilder('s')
-            .select('s.name')
-            .where('s.id = :id', { id: task.statusId })
-            .getRawOne<{ s_name: string }>()
-            .then((r) => r?.s_name ?? null);
+            .getRepository(TaskStatus)
+            .findOne({ select: { name: true }, where: { id: task.statusId } })
+            .then((r) => r?.name ?? null);
 
     const assigneeIds: number[] =
       opts?.assigneeIds ??

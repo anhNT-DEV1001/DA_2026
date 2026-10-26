@@ -106,6 +106,8 @@ export class TasksService {
       .getRepository(Task)
       .createQueryBuilder('task')
       .where('task.workspaceId = :workspaceId', { workspaceId });
+    if (query.spaceId !== undefined)
+      builder.andWhere('task.spaceId = :spaceId', { spaceId: query.spaceId });
     if (query.search)
       builder.andWhere('task.title ILIKE :search', {
         search: `%${query.search}%`,
