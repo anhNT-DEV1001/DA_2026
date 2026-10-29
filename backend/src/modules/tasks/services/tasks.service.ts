@@ -13,6 +13,7 @@ import { MasterData } from '../../admin/entites/index.js';
 import {
   CreateTaskDto,
   MoveTaskDto,
+  TaskActivityQuery,
   TaskListQuery,
   TaskPageQuery,
   UpdateTaskDto,
@@ -22,6 +23,7 @@ import {
   PageResponse,
 } from '../../../common/responses/paginate.response.js';
 import { TaskActivityService } from './task-activity.service.js';
+import { TaskRealtimeService } from './task-realtime.service.js';
 
 const activeStatuses = ['MS001', 'active'];
 const PRIORITY_GROUP = 'PRIORITY';
@@ -35,6 +37,7 @@ export class TasksService {
   constructor(
     private readonly source: DataSource,
     private readonly activity: TaskActivityService,
+    private readonly realtime: TaskRealtimeService,
   ) {}
 
   private positiveId(id: number) {
@@ -273,10 +276,21 @@ export class TasksService {
     return Object.assign(task, { assigneeIds: assigns.map((a) => a.userId) });
   }
 
+  /** Kiểm tra quyền thành viên workspace và trả về task (dùng cho comment) */
+  async access(
+    manager: EntityManager,
+    workspaceId: number,
+    taskId: number,
+    actorId: number,
+  ) {
+    await this.workspace(manager, workspaceId, actorId);
+    return this.task(manager, workspaceId, taskId);
+  }
+
   async workspaceActivities(
     workspaceId: number,
     actorId: number,
-    query: TaskPageQuery,
+    query: TaskActivityQuery,
   ) {
     await this.workspace(this.source.manager, workspaceId, actorId);
     return this.activity.listByWorkspace(workspaceId, query);
@@ -293,8 +307,13 @@ export class TasksService {
     return this.activity.listByTask(workspaceId, taskId, query);
   }
 
-  async create(workspaceId: number, actorId: number, dto: CreateTaskDto) {
-    return this.source.transaction(async (manager) => {
+  async create(
+    workspaceId: number,
+    actorId: number,
+    dto: CreateTaskDto,
+    origin?: string,
+  ) {
+    const created = await this.source.transaction(async (manager) => {
       await this.workspace(manager, workspaceId, actorId, true);
       // Không phụ thuộc mã 'todo': trạng thái chưa hoàn thành đầu tiên của space
       const defaultStatus =
@@ -334,6 +353,13 @@ export class TasksService {
       await this.activity.record(manager, task, actorId, 'created', null, snap);
       return task;
     });
+    this.realtime.emit(
+      created,
+      'task.created',
+      { taskId: created.id, statusId: created.statusId, actorId },
+      origin,
+    );
+    return created;
   }
 
   async update(
@@ -341,12 +367,15 @@ export class TasksService {
     taskId: number,
     actorId: number,
     dto: UpdateTaskDto,
+    origin?: string,
   ) {
-    return this.source.transaction(async (manager) => {
+    let fromStatusId: number | undefined;
+    let changed = false;
+    const updated = await this.source.transaction(async (manager) => {
       await this.workspace(manager, workspaceId, actorId, true);
       const task = await this.task(manager, workspaceId, taskId, true);
       const before = await this.activity.snapshot(manager, task);
-      const fromStatusId = task.statusId;
+      fromStatusId = task.statusId;
       for (const key of [
         'title',
         'description',
@@ -361,8 +390,8 @@ export class TasksService {
       const after = await this.activity.snapshot(manager, task, {
         statusName: status.name,
       });
-      const changed = this.activity.diff(before, after);
-      if (!changed.length) return task;
+      if (!this.activity.diff(before, after).length) return task;
+      changed = true;
       // Đổi trạng thái ngoài kanban → đưa task lên đầu cột mới
       if (task.statusId !== fromStatusId)
         task.position = await this.topPosition(
@@ -376,6 +405,19 @@ export class TasksService {
       await this.activity.record(manager, task, actorId, 'updated', before, after);
       return task;
     });
+    if (changed)
+      this.realtime.emit(
+        updated,
+        'task.updated',
+        {
+          taskId: updated.id,
+          statusId: updated.statusId,
+          fromStatusId,
+          actorId,
+        },
+        origin,
+      );
+    return updated;
   }
 
   /** Kéo thả trên kanban: đổi trạng thái (nếu có) và vị trí trong cột */
@@ -384,11 +426,14 @@ export class TasksService {
     taskId: number,
     actorId: number,
     dto: MoveTaskDto,
+    origin?: string,
   ) {
-    return this.source.transaction(async (manager) => {
+    let fromStatusId: number | undefined;
+    const moved = await this.source.transaction(async (manager) => {
       await this.workspace(manager, workspaceId, actorId, true);
       const task = await this.task(manager, workspaceId, taskId, true);
       const before = await this.activity.snapshot(manager, task);
+      fromStatusId = task.statusId;
       task.statusId = dto.statusId;
       const status = await this.validate(manager, task);
       task.position = await this.positionAfter(
@@ -413,10 +458,22 @@ export class TasksService {
         );
       return task;
     });
+    this.realtime.emit(
+      moved,
+      'task.moved',
+      { taskId: moved.id, statusId: moved.statusId, fromStatusId, actorId },
+      origin,
+    );
+    return moved;
   }
 
-  async remove(workspaceId: number, taskId: number, actorId: number) {
-    return this.source.transaction(async (manager) => {
+  async remove(
+    workspaceId: number,
+    taskId: number,
+    actorId: number,
+    origin?: string,
+  ) {
+    const removed = await this.source.transaction(async (manager) => {
       await this.workspace(manager, workspaceId, actorId, true);
       const task = await this.task(manager, workspaceId, taskId, true);
       const before = await this.activity.snapshot(manager, task);
@@ -425,7 +482,14 @@ export class TasksService {
       task.deletedAt = new Date();
       await manager.getRepository(Task).save(task);
       await this.activity.record(manager, task, actorId, 'deleted', before);
-      return { id: task.id, deletedAt: task.deletedAt };
+      return task;
     });
+    this.realtime.emit(
+      removed,
+      'task.deleted',
+      { taskId: removed.id, statusId: removed.statusId, actorId },
+      origin,
+    );
+    return { id: removed.id, deletedAt: removed.deletedAt };
   }
 }

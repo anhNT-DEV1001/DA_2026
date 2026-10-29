@@ -17,14 +17,21 @@ export class WebsocketService {
     this.gateway.server.to(userRoom(userId)).emit('message', envelope);
   }
 
-  /** Gửi tới các client đã subscribe topic, ví dụ 'order:123' */
-  toTopic<T>(topic: string, event: string, data: T) {
+  /**
+   * Gửi tới các client đã subscribe topic, ví dụ 'order:123'.
+   * `exceptSocketId`: bỏ qua socket đã gây ra thay đổi (nó đã tự cập nhật dữ liệu).
+   */
+  toTopic<T>(topic: string, event: string, data: T, exceptSocketId?: string) {
     const envelope: RealtimeEnvelope<T> = {
       channel: topic,
       event,
       data,
       ts: new Date().toISOString(),
     };
-    this.gateway.server.to(topicRoom(topic)).emit('message', envelope);
+    const room = this.gateway.server.to(topicRoom(topic));
+    (exceptSocketId ? room.except(exceptSocketId) : room).emit(
+      'message',
+      envelope,
+    );
   }
 }

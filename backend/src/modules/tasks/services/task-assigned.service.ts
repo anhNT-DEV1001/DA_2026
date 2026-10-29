@@ -12,6 +12,7 @@ import { Workspace } from '../../workspaces/entities/workspace.entity.js';
 import { WorkspaceMember } from '../../workspaces/entities/workspace-member.entity.js';
 import { AssignTaskDto } from '../dtos/task.dto.js';
 import { TaskActivityService } from './task-activity.service.js';
+import { TaskRealtimeService } from './task-realtime.service.js';
 
 const activeStatuses = ['MS001', 'active'];
 
@@ -20,6 +21,7 @@ export class TaskAssignedService {
   constructor(
     private readonly source: DataSource,
     private readonly activity: TaskActivityService,
+    private readonly realtime: TaskRealtimeService,
   ) {}
 
   private async assertWorkspaceMember(
@@ -75,8 +77,9 @@ export class TaskAssignedService {
     taskId: number,
     actorId: number,
     dto: AssignTaskDto,
+    origin?: string,
   ) {
-    return this.source.transaction(async (manager) => {
+    const { task, record } = await this.source.transaction(async (manager) => {
       await this.assertWorkspaceMember(manager, workspaceId, actorId);
       const task = await this.resolveTask(manager, workspaceId, taskId, true);
 
@@ -111,8 +114,15 @@ export class TaskAssignedService {
 
       const after = await this.activity.snapshot(manager, task);
       await this.activity.record(manager, task, actorId, 'updated', before, after);
-      return record;
+      return { task, record };
     });
+    this.realtime.emit(
+      task,
+      'task.assignees_changed',
+      { taskId, actorId },
+      origin,
+    );
+    return record;
   }
 
   async unassign(
@@ -120,8 +130,9 @@ export class TaskAssignedService {
     taskId: number,
     targetUserId: number,
     actorId: number,
+    origin?: string,
   ) {
-    return this.source.transaction(async (manager) => {
+    const task = await this.source.transaction(async (manager) => {
       await this.assertWorkspaceMember(manager, workspaceId, actorId);
       const task = await this.resolveTask(manager, workspaceId, taskId, true);
 
@@ -136,8 +147,14 @@ export class TaskAssignedService {
       await manager.getRepository(TaskAssigned).remove(record);
       const after = await this.activity.snapshot(manager, task);
       await this.activity.record(manager, task, actorId, 'updated', before, after);
-
-      return { taskId, userId: targetUserId };
+      return task;
     });
+    this.realtime.emit(
+      task,
+      'task.assignees_changed',
+      { taskId, actorId },
+      origin,
+    );
+    return { taskId, userId: targetUserId };
   }
 }

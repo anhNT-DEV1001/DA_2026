@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -39,6 +39,8 @@ interface TaskBoardProps {
   canCreate: boolean;
   onOpen: (taskId: number) => void;
   onCreate: (statusId: number) => void;
+  /** Đánh dấu đang kéo thả để realtime hoãn làm mới board */
+  draggingRef?: RefObject<boolean>;
 }
 
 export function TaskBoard({
@@ -52,6 +54,7 @@ export function TaskBoard({
   canCreate,
   onOpen,
   onCreate,
+  draggingRef,
 }: TaskBoardProps) {
   const [active, setActive] = useState<Task | null>(null);
   // Vị trí ban đầu của card đang kéo và cache để hoàn tác
@@ -101,6 +104,7 @@ export function TaskBoard({
     const task = (event.active.data.current as BoardDragData).task;
     const from = cache.locate(task.id, statusIds);
     if (!from) return;
+    if (draggingRef) draggingRef.current = true;
     void cache.cancel();
     drag.current = {
       statusId: from.statusId,
@@ -131,6 +135,7 @@ export function TaskBoard({
 
   function handleDragEnd({ active: dragged, over }: DragEndEvent) {
     setActive(null);
+    if (draggingRef) draggingRef.current = false;
     const start = drag.current;
     drag.current = null;
     const taskId = taskIdOf(dragged.id);
@@ -160,6 +165,7 @@ export function TaskBoard({
 
   function handleDragCancel() {
     setActive(null);
+    if (draggingRef) draggingRef.current = false;
     if (drag.current) cache.restore(drag.current.snapshot);
     drag.current = null;
   }

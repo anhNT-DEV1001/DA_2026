@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { WorkspaceTaskActivity } from "./task-activity";
@@ -27,6 +27,7 @@ import {
 } from "../types";
 import { useMasterDataByGroup } from "@/features/masterdata/hooks";
 import { TaskDialog } from "./task-dialog";
+import { TaskCommentDrawer } from "./task-comment";
 import { TaskFilter } from "./task-filter";
 import { TaskInlineSelect } from "./task-inline-select";
 import { TaskAssigneeCell } from "./task-assignee-cell";
@@ -40,6 +41,7 @@ import {
   useDeleteTask,
   useSaveTask,
   useTaskSearchParams,
+  useTaskRealtime,
 } from "../hooks";
 
 function dateLabel(value: string | null) {
@@ -68,6 +70,24 @@ export function SpaceTasks({ workspace, space, view }: SpaceTasksProps) {
   const [deleting, setDeleting] = useState<Task | null>(null);
   const [notice, setNotice] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const draggingRef = useRef(false);
+
+  useTaskRealtime({
+    workspaceId: workspace.id,
+    spaceId: space.id,
+    scope: queryKey,
+    openTaskId: typeof selected === "number" ? selected : null,
+    onOpenTaskDeleted: () => {
+      setSelected(null);
+      toast.add({
+        title: "Task đã bị xóa",
+        description: "Task bạn đang xem vừa bị người khác xóa.",
+        type: "info",
+      });
+    },
+    draggingRef,
+    enabled: has("VIEW"),
+  });
 
   const list = useTaskList(
     workspace.id,
@@ -326,6 +346,8 @@ export function SpaceTasks({ workspace, space, view }: SpaceTasksProps) {
       {view === "activity" ? (
         <WorkspaceTaskActivity
           workspaceId={workspace.id}
+          spaceId={space.id}
+          onOpenTask={setSelected}
           queryKey={queryKey}
           statuses={statuses.data ?? []}
           people={people}
@@ -396,6 +418,7 @@ export function SpaceTasks({ workspace, space, view }: SpaceTasksProps) {
                   canCreate={has("CREATE")}
                   onOpen={setSelected}
                   onCreate={openCreate}
+                  draggingRef={draggingRef}
                 />
               )
             )
@@ -421,17 +444,16 @@ export function SpaceTasks({ workspace, space, view }: SpaceTasksProps) {
               }}
             />
           )}
-          {selected !== null && (
+          {selected === "new" && (
             <TaskDialog
-              key={selected}
               workspaceId={workspace.id}
               spaceId={space.id}
-              taskId={selected === "new" ? null : selected}
-              defaultStatusId={selected === "new" ? newStatusId : undefined}
+              taskId={null}
+              defaultStatusId={newStatusId}
               statuses={statuses.data ?? []}
               people={people}
               names={names}
-              canEdit={selected === "new" ? has("CREATE") : has("UPDATE")}
+              canEdit={has("CREATE")}
               queryKey={queryKey}
               onClose={() => setSelected(null)}
             />
@@ -472,6 +494,20 @@ export function SpaceTasks({ workspace, space, view }: SpaceTasksProps) {
             </DialogContent>
           </Dialog>
         </section>
+      )}
+      {/* Mở được từ list, board và timeline hoạt động */}
+      {selected !== null && selected !== "new" && (
+        <TaskCommentDrawer
+          key={selected}
+          workspaceId={workspace.id}
+          taskId={selected}
+          statuses={statuses.data ?? []}
+          people={people}
+          names={names}
+          canEdit={has("UPDATE")}
+          queryKey={queryKey}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );

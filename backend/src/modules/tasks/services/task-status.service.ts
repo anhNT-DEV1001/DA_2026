@@ -8,6 +8,7 @@ import { DataSource, EntityManager, QueryFailedError } from 'typeorm';
 import { TaskStatus } from '../entities/task-status.entity.js';
 import { Space } from '../../workspaces/entities/space.entity.js';
 import { CreateTaskStatusDto, UpdateTaskStatusDto } from '../dtos/task.dto.js';
+import { TaskRealtimeService } from './task-realtime.service.js';
 
 const DEFAULT_STATUSES = [
   { code: 'todo', name: 'Chưa bắt đầu', displayOrder: 0, isCompleted: false },
@@ -34,7 +35,10 @@ export interface InitialTaskStatus {
 
 @Injectable()
 export class TaskStatusService {
-  constructor(private readonly source: DataSource) {}
+  constructor(
+    private readonly source: DataSource,
+    private readonly realtime: TaskRealtimeService,
+  ) {}
 
   /**
    * Call inside the space-creation transaction so creation cannot leave a partial setup.
@@ -97,8 +101,13 @@ export class TaskStatusService {
     });
   }
 
-  async create(workspaceId: number, actorId: number, dto: CreateTaskStatusDto) {
-    return this.source.transaction(async (manager) => {
+  async create(
+    workspaceId: number,
+    actorId: number,
+    dto: CreateTaskStatusDto,
+    origin?: string,
+  ) {
+    const status = await this.source.transaction(async (manager) => {
       await this.resolveSpace(manager, workspaceId, dto.spaceId);
       const status = manager.getRepository(TaskStatus).create({
         spaceId: dto.spaceId,
@@ -123,6 +132,8 @@ export class TaskStatusService {
         throw err;
       }
     });
+    this.statusChanged(workspaceId, dto.spaceId, actorId, origin);
+    return status;
   }
 
   async update(
@@ -131,8 +142,9 @@ export class TaskStatusService {
     statusId: number,
     actorId: number,
     dto: UpdateTaskStatusDto,
+    origin?: string,
   ) {
-    return this.source.transaction(async (manager) => {
+    const saved = await this.source.transaction(async (manager) => {
       await this.resolveSpace(manager, workspaceId, spaceId);
       const repo = manager.getRepository(TaskStatus);
       const status = await repo.findOne({
@@ -149,10 +161,18 @@ export class TaskStatusService {
 
       return repo.save(status);
     });
+    this.statusChanged(workspaceId, spaceId, actorId, origin);
+    return saved;
   }
 
-  async remove(workspaceId: number, spaceId: number, statusId: number) {
-    return this.source.transaction(async (manager) => {
+  async remove(
+    workspaceId: number,
+    spaceId: number,
+    statusId: number,
+    actorId?: number,
+    origin?: string,
+  ) {
+    const result = await this.source.transaction(async (manager) => {
       await this.resolveSpace(manager, workspaceId, spaceId);
       const repo = manager.getRepository(TaskStatus);
       const status = await repo.findOne({
@@ -173,5 +193,22 @@ export class TaskStatusService {
       }
       return { id: statusId };
     });
+    this.statusChanged(workspaceId, spaceId, actorId, origin);
+    return result;
+  }
+
+  /** Cột của board thay đổi → client tải lại danh sách trạng thái và các cột */
+  private statusChanged(
+    workspaceId: number,
+    spaceId: number,
+    actorId?: number,
+    origin?: string,
+  ) {
+    this.realtime.emit(
+      { workspaceId, spaceId },
+      'status.changed',
+      { spaceId, actorId },
+      origin,
+    );
   }
 }

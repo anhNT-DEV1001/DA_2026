@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { getRealtimeSocketId } from "./realtime-socket-id";
 
 export interface ApiResponse<T> {
   statusCode: number;
@@ -14,6 +15,13 @@ export const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+});
+
+// Gắn socket.id để backend không gửi realtime ngược lại cho tab vừa thao tác
+apiClient.interceptors.request.use((config) => {
+  const socketId = getRealtimeSocketId();
+  if (socketId) config.headers.set("x-socket-id", socketId);
+  return config;
 });
 
 // Queue quản lý request khi đang refresh token

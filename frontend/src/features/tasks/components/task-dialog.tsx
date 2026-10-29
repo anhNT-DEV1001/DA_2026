@@ -3,7 +3,6 @@
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ModalRoot,
   ModalContent,
@@ -15,6 +14,7 @@ import {
 } from "@/components/common/modal";
 import { ComboboxPicker } from "@/components/common/combobox-picker";
 import { DateTimePicker } from "@/components/common/datetime-picker";
+import { RichTextEditor } from "@/components/common/rich-text-editor";
 import {
   DEFAULT_PRIORITY,
   PRIORITY_GROUP,
@@ -25,27 +25,15 @@ import {
 import type { Person } from "../types";
 import {
   useTaskDetail,
-  useTaskHistory,
   useSaveTask,
   useAssignTask,
   useUnassignTask,
 } from "../hooks";
 import { TaskError } from "./task-controls";
+import { TaskHistory } from "./task-history";
 import { MasterDataPicker } from "@/features/masterdata/components/masterdata-picker";
-import { useMasterDataByGroup } from "@/features/masterdata/hooks";
 
-const fieldLabels: Record<string, string> = {
-  title: "Tiêu đề",
-  description: "Mô tả",
-  statusId: "Trạng thái",
-  assigneeIds: "Người phụ trách",
-  priority: "Ưu tiên",
-  startDate: "Ngày bắt đầu",
-  dueDate: "Hạn hoàn thành",
-  completedAt: "Hoàn thành lúc",
-};
-
-function toISODate(date: Date | null): string | null {
+export function toISODate(date: Date | null): string | null {
   if (!date) return null;
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -53,7 +41,7 @@ function toISODate(date: Date | null): string | null {
   return `${y}-${m}-${d}`;
 }
 
-function toLocalDate(iso: string | null): Date | undefined {
+export function toLocalDate(iso: string | null): Date | undefined {
   if (!iso) return undefined;
   const [y, mo, d] = iso.split("-").map(Number);
   return new Date(y, mo - 1, d);
@@ -106,7 +94,10 @@ export function TaskDialog(props: Props) {
             <TaskForm {...props} task={detail.data} onSavingChange={setSaving} />
           )}
           {props.taskId !== null && (
-            <TaskHistory {...props} taskId={props.taskId} />
+            <section className="mt-4 space-y-3 border-t pt-4">
+              <h3 className="font-semibold">Lịch sử task</h3>
+              <TaskHistory {...props} taskId={props.taskId} />
+            </section>
           )}
         </ModalBody>
       </ModalContent>
@@ -216,18 +207,16 @@ function TaskForm({
           />
         </label>
 
-        <label className="block space-y-1 text-sm">
-          Mô tả
-          <Textarea
+        <div className="space-y-1 text-sm">
+          <span>Mô tả</span>
+          <RichTextEditor
+            aria-label="Mô tả"
             disabled={disabled}
-            rows={3}
-            maxLength={20000}
             value={form.description ?? ""}
-            onChange={(e) =>
-              setForm({ ...form, description: e.target.value || null })
-            }
+            placeholder="Thêm mô tả cho task…"
+            onChange={(html) => setForm({ ...form, description: html || null })}
           />
-        </label>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1 text-sm">
@@ -335,125 +324,5 @@ function TaskForm({
         )}
       </ModalFooter>
     </form>
-  );
-}
-
-function TaskHistory(props: Props & { taskId: number }) {
-  const [page, setPage] = useState(1);
-  const history = useTaskHistory(
-    props.workspaceId,
-    props.queryKey,
-    props.taskId,
-    page,
-  );
-  const priorities = useMasterDataByGroup(PRIORITY_GROUP);
-  function format(key: string, value: unknown): string {
-    if (value === null || value === undefined || value === "") return "Chưa có";
-    if (key === "statusId")
-      return (
-        props.statuses.find((s) => s.id === value)?.name ??
-        `Trạng thái #${value}`
-      );
-    if (key === "assigneeIds") {
-      const ids = Array.isArray(value) ? (value as number[]) : [];
-      if (!ids.length) return "Chưa giao";
-      return ids
-        .map((id) => props.names.get(id) ?? `Người dùng #${id}`)
-        .join(", ");
-    }
-    if (key === "priority")
-      return (
-        priorities.data?.find((p) => p.value === value)?.name ?? String(value)
-      );
-    if (key === "completedAt")
-      return new Date(String(value)).toLocaleString("vi-VN");
-    return String(value);
-  }
-  return (
-    <section className="space-y-3 border-t pt-4 mt-4">
-      <h3 className="font-semibold">Lịch sử task</h3>
-      {history.isPending ? (
-        <p role="status" className="text-sm">
-          Đang tải lịch sử…
-        </p>
-      ) : history.isError ? (
-        <TaskError error={history.error} retry={() => void history.refetch()} />
-      ) : (
-        <>
-          {!history.data.items.length && (
-            <p className="text-sm text-muted-foreground">
-              Chưa có lịch sử được ghi nhận.
-            </p>
-          )}
-          <ol className="space-y-3">
-            {history.data.items.map((item) => (
-              <li key={item.id} className="border-l-2 pl-3 text-sm">
-                <p className="font-medium">
-                  {item.action === "created"
-                    ? "Tạo task"
-                    : item.action === "deleted"
-                      ? "Xóa task"
-                      : "Cập nhật task"}{" "}
-                  ·{" "}
-                  {item.actorId
-                    ? (props.names.get(item.actorId) ??
-                      `Người dùng #${item.actorId}`)
-                    : "Người dùng đã xóa"}
-                </p>
-                <time
-                  dateTime={item.createdAt}
-                  className="text-xs text-muted-foreground"
-                >
-                  {new Date(item.createdAt).toLocaleString("vi-VN")}
-                </time>
-                {Object.keys(item.after ?? item.before ?? {})
-                  .filter(
-                    (key) =>
-                      key in fieldLabels &&
-                      (item.action !== "updated" ||
-                        JSON.stringify(item.before?.[key]) !==
-                          JSON.stringify(item.after?.[key])),
-                  )
-                  .map((key) => (
-                    <p
-                      key={key}
-                      className="mt-1 break-words whitespace-pre-wrap text-muted-foreground"
-                    >
-                      {fieldLabels[key]}:{" "}
-                      {item.action === "updated"
-                        ? `${format(key, item.before?.[key])} → `
-                        : ""}
-                      {format(key, (item.after ?? item.before)?.[key])}
-                    </p>
-                  ))}
-              </li>
-            ))}
-          </ol>
-          {history.data.meta.pageCount > 1 && (
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-              >
-                Trước
-              </Button>
-              <span className="text-sm">
-                Trang {page}/{history.data.meta.pageCount}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!history.data.meta.hasNextPage}
-                onClick={() => setPage(page + 1)}
-              >
-                Sau
-              </Button>
-            </div>
-          )}
-        </>
-      )}
-    </section>
   );
 }

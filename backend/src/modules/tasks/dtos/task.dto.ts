@@ -161,6 +161,15 @@ export class TaskPageQuery extends PaginanteRequest {
   limit = 20;
 }
 
+export class TaskActivityQuery extends TaskPageQuery {
+  @ApiPropertyOptional({ description: 'Chỉ lấy hoạt động của task trong space này' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  spaceId?: number;
+}
+
 export class TaskListQuery extends TaskPageQuery {
   @ApiPropertyOptional({ description: 'Lọc theo space' })
   @ValidateIf((_, value) => value !== undefined)

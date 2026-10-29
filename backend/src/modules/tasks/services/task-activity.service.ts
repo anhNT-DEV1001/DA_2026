@@ -4,7 +4,7 @@ import { TaskActivity } from '../entities/task-activity.entity.js';
 import { Task } from '../entities/task.entity.js';
 import { TaskAssigned } from '../entities/task-assigned.entity.js';
 import { TaskStatus } from '../entities/task-status.entity.js';
-import { TaskPageQuery } from '../dtos/task.dto.js';
+import { TaskActivityQuery, TaskPageQuery } from '../dtos/task.dto.js';
 import {
   PageMetadataResponse,
   PageResponse,
@@ -137,12 +137,15 @@ export class TaskActivityService {
     );
   }
 
-  async listByWorkspace(workspaceId: number, query: TaskPageQuery) {
-    const [items, total] = await this.source
+  async listByWorkspace(workspaceId: number, query: TaskActivityQuery) {
+    const qb = this.source
       .getRepository(TaskActivity)
       .createQueryBuilder('a')
       .withDeleted()
-      .innerJoin('a.task', 't', 't.workspaceId = :workspaceId', { workspaceId })
+      .innerJoin('a.task', 't', 't.workspaceId = :workspaceId', { workspaceId });
+    if (query.spaceId)
+      qb.andWhere('t.spaceId = :spaceId', { spaceId: query.spaceId });
+    const [items, total] = await qb
       .orderBy('a.id', 'DESC')
       .skip((query.page - 1) * query.limit)
       .take(query.limit)

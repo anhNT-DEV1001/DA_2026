@@ -45,10 +45,39 @@ import {
 import { useAppShellStore } from "@/stores/app-shell-store";
 
 const rowClass =
-  "flex h-9 w-full items-center gap-3 rounded-lg px-2.5 text-sm transition-colors";
+  "group/row-item flex h-9 w-full items-center gap-3 rounded-lg px-2.5 text-sm transition-[background-color,color,transform] duration-200 ease-out active:scale-[0.98] motion-reduce:transition-none";
 const idleRowClass =
   "font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground";
 const activeRowClass = "bg-primary/10 font-semibold text-primary";
+// Icon trong dòng menu nhích nhẹ khi hover
+const rowIconClass =
+  "size-4 shrink-0 transition-transform duration-200 ease-out group-hover/row-item:scale-110 motion-reduce:transition-none";
+const chevronClass =
+  "size-3.5 transition-transform duration-200 ease-out motion-reduce:transition-none";
+
+/**
+ * Thu/mở mượt bằng grid-template-rows (0fr <-> 1fr), không cần đo chiều cao
+ */
+function Collapse({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+        open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+      )}
+      aria-hidden={!open}
+      inert={!open}
+    >
+      <div className="min-h-0 overflow-hidden">{children}</div>
+    </div>
+  );
+}
 
 function isAlias(menu: MenuItem, alias: string) {
   return menu.alias?.toLowerCase() === alias.toLowerCase();
@@ -189,7 +218,7 @@ function NavMenuNode({
   const isOpen = expanded || Boolean(query);
   const content = (
     <>
-      <MenuIcon name={menu.icon} className="size-4 shrink-0" />
+      <MenuIcon name={menu.icon} className={rowIconClass} />
       <span className="flex-1 truncate text-left">{menu.name}</span>
     </>
   );
@@ -243,15 +272,15 @@ function NavMenuNode({
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={isOpen}
           aria-label={isOpen ? `Thu gọn ${menu.name}` : `Mở rộng ${menu.name}`}
-          className="absolute right-1.5 flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+          className="absolute right-1.5 flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-sidebar-accent hover:text-foreground"
         >
           <ChevronRight
-            className={cn("size-3.5 transition-transform", isOpen && "rotate-90")}
+            className={cn(chevronClass, isOpen && "rotate-90")}
             aria-hidden="true"
           />
         </button>
       </div>
-      {isOpen && (
+      <Collapse open={isOpen}>
         <ul
           className={cn(
             "mt-0.5 flex flex-col gap-0.5 border-l border-border pl-2",
@@ -268,7 +297,7 @@ function NavMenuNode({
             />
           ))}
         </ul>
-      )}
+      </Collapse>
     </li>
   );
 }
@@ -326,7 +355,7 @@ function SpacesSection({
               title={`Mở workspace "${workspace.name}"`}
               aria-current={isWorkspaceActive ? "page" : undefined}
               className={cn(
-                "flex items-center gap-1.5 rounded-md text-xs font-semibold uppercase tracking-wider hover:text-foreground",
+                "flex items-center gap-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors duration-200 hover:text-foreground",
                 isWorkspaceActive ? "text-primary" : "text-muted-foreground",
               )}
             >
@@ -350,10 +379,10 @@ function SpacesSection({
             aria-expanded={open}
             aria-controls={listId}
             aria-label={open ? `Thu gọn ${menu.name}` : `Mở rộng ${menu.name}`}
-            className="flex size-5 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+            className="flex size-5 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-sidebar-accent hover:text-foreground"
           >
             <ChevronDown
-              className={cn("size-3.5 transition-transform", !open && "-rotate-90")}
+              className={cn(chevronClass, !open && "-rotate-90")}
               aria-hidden="true"
             />
           </button>
@@ -364,14 +393,14 @@ function SpacesSection({
             onClick={onCreate}
             aria-label="Thêm space"
             title="Thêm space"
-            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-sidebar-accent hover:text-foreground"
           >
             <Plus className="size-4" aria-hidden="true" />
           </button>
         )}
       </div>
 
-      {open && (
+      <Collapse open={open}>
         <ul
           id={listId}
           className="relative ml-4 flex flex-col gap-0.5 border-l border-border pl-2"
@@ -395,17 +424,19 @@ function SpacesSection({
               const isActive = space.id === activeSpace?.id;
               return (
                 <li key={space.id} className="relative">
-                  {isActive && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -left-2.25 top-1.5 h-6 w-0.5 rounded-full bg-primary"
-                    />
-                  )}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "absolute -left-2.25 top-1.5 h-6 w-0.5 rounded-full bg-primary transition-[transform,opacity] duration-300 ease-out motion-reduce:transition-none",
+                      isActive ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0",
+                    )}
+                  />
                   <Link
                     href={spaceHref(workspace, space)}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors",
+                      rowClass,
+                      "gap-2.5",
                       isActive
                         ? activeRowClass
                         : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
@@ -413,7 +444,7 @@ function SpacesSection({
                   >
                     <MenuIcon
                       name={space.icon || menu.icon}
-                      className="size-4 shrink-0"
+                      className={rowIconClass}
                     />
                     <span className="flex-1 truncate text-left">{space.name}</span>
                   </Link>
@@ -422,7 +453,7 @@ function SpacesSection({
             })
           )}
         </ul>
-      )}
+      </Collapse>
     </section>
   );
 }
@@ -546,7 +577,10 @@ export function NavPanel() {
             onAddWorkspace={() => setIsCreateWorkspaceOpen(true)}
           />
         ) : (
-          <div className="flex items-center gap-3 p-2">
+          <div
+            key={activeRoot?.id}
+            className="flex items-center gap-3 p-2 animate-in fade-in-0 duration-300"
+          >
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <MenuIcon name={activeRoot?.icon} className="size-4" />
             </span>
@@ -556,8 +590,11 @@ export function NavPanel() {
           </div>
         )}
 
-        <label className="mt-2 flex h-9 items-center gap-2 rounded-lg bg-muted px-3 text-sm text-muted-foreground transition-shadow focus-within:bg-card focus-within:ring-2 focus-within:ring-primary/40">
-          <Search className="size-4 shrink-0" aria-hidden="true" />
+        <label className="group/search mt-2 flex h-9 cursor-text items-center gap-2 rounded-lg border border-input bg-background px-2.5 text-sm text-muted-foreground shadow-xs transition-[border-color,box-shadow,color] duration-200 ease-out hover:border-ring/60 focus-within:border-primary focus-within:text-foreground focus-within:ring-3 focus-within:ring-primary/20 motion-reduce:transition-none dark:bg-input/30">
+          <Search
+            className="size-4 shrink-0 transition-colors duration-200 group-focus-within/search:text-primary"
+            aria-hidden="true"
+          />
           <span className="sr-only">Tìm kiếm menu</span>
           <input
             ref={searchRef}
@@ -565,9 +602,9 @@ export function NavPanel() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tìm kiếm menu..."
-            className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+            className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground/80 [&::-webkit-search-cancel-button]:cursor-pointer"
           />
-          <kbd className="rounded-md border border-border bg-card px-1.5 py-0.5 font-sans text-[11px] font-medium">
+          <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-sans text-[11px] font-medium leading-none text-muted-foreground transition-opacity duration-200 group-focus-within/search:opacity-0">
             /
           </kbd>
         </label>
@@ -581,7 +618,13 @@ export function NavPanel() {
             ))}
           </div>
         ) : hasVisibleMenu ? (
-          <ul className="flex flex-col gap-0.5">{menuNodes}</ul>
+          // key theo menu gốc: đổi menu trên dock thì danh sách trượt nhẹ vào
+          <ul
+            key={activeRoot?.id}
+            className="flex flex-col gap-0.5 animate-in fade-in-0 slide-in-from-left-2 duration-300 ease-out motion-reduce:animate-none"
+          >
+            {menuNodes}
+          </ul>
         ) : (
           <div className="flex flex-col items-center gap-2 p-6 text-center text-sm text-muted-foreground">
             <span>
@@ -606,7 +649,7 @@ export function NavPanel() {
           <button
             type="button"
             onClick={() => setIsAddMemberOpen(true)}
-            className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border text-sm font-medium text-muted-foreground transition-colors duration-200 hover:border-primary hover:text-primary"
           >
             <UserPlus className="size-4" aria-hidden="true" />
             Thêm thành viên

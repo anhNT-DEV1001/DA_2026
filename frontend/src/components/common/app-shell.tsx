@@ -34,7 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div
         className={cn(
-          "hidden overflow-hidden transition-[width,opacity] duration-300 ease-out md:block",
+          "hidden overflow-hidden transition-[width,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none md:block",
           panelOpen ? "w-64 opacity-100" : "w-0 opacity-0",
         )}
         aria-hidden={!panelOpen}

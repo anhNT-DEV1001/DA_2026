@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TaskDialog } from "./task-dialog";
+import { TaskCommentDrawer } from "./task-comment";
 import { TaskError } from "./task-controls";
 import { TimelinePages } from "./timeline-pages";
 import { useTaskList } from "../hooks";
@@ -226,7 +226,7 @@ export function TaskGantt(props: TaskTimelineProps) {
         </>
       )}
       {selected !== null && (
-        <TaskDialog
+        <TaskCommentDrawer
           key={selected}
           {...props}
           taskId={selected}

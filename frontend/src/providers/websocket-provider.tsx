@@ -11,6 +11,7 @@ import {
 } from "react";
 import { io, Socket } from "socket.io-client";
 import { apiClient } from "@/lib/axios";
+import { setRealtimeSocketId } from "@/lib/realtime-socket-id";
 import { useAuthStore } from "@/stores/auth-store";
 
 /** Khớp với RealtimeEnvelope ở backend (infrastructure/websockets/interfaces) */
@@ -83,6 +84,7 @@ export function WebsocketProvider({ children }: { children: ReactNode }) {
     let disposed = false;
 
     s.on("connect", () => {
+      setRealtimeSocketId(s.id);
       setStatus("connected");
       stableTimer = setTimeout(() => (authRetries = 0), STABLE_CONNECTION_MS);
 
@@ -106,6 +108,7 @@ export function WebsocketProvider({ children }: { children: ReactNode }) {
     });
 
     s.on("disconnect", (reason) => {
+      setRealtimeSocketId(undefined);
       clearTimeout(stableTimer);
       setStatus("disconnected");
 
@@ -145,6 +148,7 @@ export function WebsocketProvider({ children }: { children: ReactNode }) {
 
     return () => {
       disposed = true;
+      setRealtimeSocketId(undefined);
       clearTimeout(stableTimer);
       clearTimeout(retryTimer);
       s.removeAllListeners();

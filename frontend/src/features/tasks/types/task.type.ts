@@ -99,3 +99,45 @@ export interface Activity {
 }
 
 export type Person = { id: number; name: string; avatar?: string | null };
+
+export interface TaskComment {
+  id: number;
+  taskId: number;
+  authorId: number | null;
+  parentId: number | null;
+  contentType: "html" | "markdown";
+  content: string;
+  editedAt: string | null;
+  createdAt: string;
+  author: {
+    id: number;
+    fullName: string;
+    username: string;
+    avatar: string | null;
+  } | null;
+}
+export interface TaskCommentInput {
+  content: string;
+  parentId?: number | null;
+}
+
+/** Event realtime của topic 'task-space:{workspaceId}:{spaceId}' (khớp TaskRealtimeEvent ở backend) */
+export type TaskRealtimeEvent =
+  | "task.created"
+  | "task.updated"
+  | "task.moved"
+  | "task.deleted"
+  | "task.assignees_changed"
+  | "comment.created"
+  | "comment.updated"
+  | "comment.deleted"
+  | "status.changed";
+
+export interface TaskRealtimePayload {
+  actorId?: number;
+  taskId?: number;
+  statusId?: number;
+  fromStatusId?: number;
+  commentId?: number;
+  spaceId?: number;
+}

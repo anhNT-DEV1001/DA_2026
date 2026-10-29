@@ -32,7 +32,7 @@ import {
   SpaceMemberRequest,
 } from './dtos/index.js';
 import WorkspaceSearch from './dtos/workspace.dto.js';
-import { WorkspaceGuard } from './guards/index.js';
+import { SpaceGuard, WorkspaceGuard } from './guards/index.js';
 import {
   WorkspaceMemberService,
   WorkspacesService,
@@ -304,7 +304,8 @@ export class WorkspacesController {
   @Get(':id/spaces/my')
   @HasPermission('WORKSPACE_VIEW')
   @ApiOperation({
-    summary: 'Lấy danh sách space mà người dùng hiện tại đang tham gia trong workspace',
+    summary:
+      'Lấy danh sách space mà người dùng hiện tại đang tham gia trong workspace',
   })
   @ApiParam({
     name: 'id',
@@ -336,6 +337,7 @@ export class WorkspacesController {
   }
 
   @Get(':id/spaces/:spaceId')
+  @UseGuards(SpaceGuard)
   @HasPermission('WORKSPACE_VIEW')
   @ApiOperation({ summary: 'Lấy chi tiết một space' })
   @ApiParam({

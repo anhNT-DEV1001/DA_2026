@@ -7,6 +7,8 @@ import type {
   Page,
   Task,
   TaskAssigned,
+  TaskComment,
+  TaskCommentInput,
   TaskFilters,
   TaskInput,
   TaskStatus,
@@ -23,11 +25,16 @@ const assigneePath = (workspaceId: number, taskId: number, userId?: number) =>
     ? `${path(workspaceId)}/${taskId}/assignees/${userId}`
     : `${path(workspaceId)}/${taskId}/assignees`;
 
+const commentPath = (workspaceId: number, taskId: number, commentId?: number) =>
+  commentId !== undefined
+    ? `${path(workspaceId)}/${taskId}/comments/${commentId}`
+    : `${path(workspaceId)}/${taskId}/comments`;
+
 export const taskService = {
   // ── Task feed & list ────────────────────────────────────────────────────────
-  feed: (workspaceId: number, page: number) =>
+  feed: (workspaceId: number, page: number, spaceId?: number) =>
     apiClient.get<unknown, Page<Activity>>(`${path(workspaceId)}/activities`, {
-      params: { page, limit: 20 },
+      params: { page, limit: 20, spaceId },
     }),
 
   list: (workspaceId: number, params: TaskFilters) =>
@@ -57,7 +64,7 @@ export const taskService = {
   activities: (workspaceId: number, taskId: number, page: number) =>
     apiClient.get<unknown, Page<Activity>>(
       `${path(workspaceId)}/${taskId}/activities`,
-      { params: { page, limit: 10 } },
+      { params: { page, limit: 30 } },
     ),
 
   // ── Task statuses (per space) ───────────────────────────────────────────────
@@ -101,4 +108,43 @@ export const taskService = {
     apiClient.delete<unknown, { taskId: number; userId: number }>(
       assigneePath(workspaceId, taskId, userId),
     ),
+
+  // ── Comments ────────────────────────────────────────────────────────────────
+  comments: (workspaceId: number, taskId: number, page: number) =>
+    apiClient.get<unknown, Page<TaskComment>>(commentPath(workspaceId, taskId), {
+      params: { page, limit: 20 },
+    }),
+
+  createComment: (workspaceId: number, taskId: number, dto: TaskCommentInput) =>
+    apiClient.post<unknown, TaskComment>(commentPath(workspaceId, taskId), {
+      ...dto,
+      contentType: "html",
+    }),
+
+  updateComment: (
+    workspaceId: number,
+    taskId: number,
+    commentId: number,
+    content: string,
+  ) =>
+    apiClient.patch<unknown, TaskComment>(
+      commentPath(workspaceId, taskId, commentId),
+      { content },
+    ),
+
+  deleteComment: (workspaceId: number, taskId: number, commentId: number) =>
+    apiClient.delete<unknown, { id: number }>(
+      commentPath(workspaceId, taskId, commentId),
+    ),
+
+  // ── Ảnh chèn trong bình luận / mô tả ────────────────────────────────────────
+  uploadImage: (workspaceId: number, taskId: number, file: File) => {
+    const data = new FormData();
+    data.append("file", file);
+    return apiClient.post<unknown, { url: string }>(
+      `${path(workspaceId)}/${taskId}/images`,
+      data,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+  },
 };

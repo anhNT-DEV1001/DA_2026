@@ -7,4 +7,8 @@ export type TaskTimelineProps = {
   people: Person[];
   names: Map<number, string>;
   canEdit: boolean;
+  /** Chỉ lấy hoạt động của task trong space này */
+  spaceId?: number;
+  /** Bấm tên task để mở drawer chi tiết */
+  onOpenTask?: (taskId: number) => void;
 };

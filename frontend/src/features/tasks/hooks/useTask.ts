@@ -1,8 +1,18 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { taskService } from "../services";
-import type { Task, TaskFilters, TaskInput } from "../types";
+import type {
+  Task,
+  TaskCommentInput,
+  TaskFilters,
+  TaskInput,
+} from "../types";
 
 type Scope = readonly unknown[];
 const _taskBase = ["tasks"] as const;
@@ -23,6 +33,7 @@ export const TASK_QUERY_KEYS = {
   history: (scope: Scope, id: number, page: number) =>
     [...scope, "activities", id, page] as const,
   feed: (scope: Scope, page: number) => [...scope, "feed", page] as const,
+  comments: (scope: Scope, id: number) => [...scope, "comments", id] as const,
 };
 
 export function useTaskList(
@@ -91,14 +102,16 @@ export function useTaskHistory(
   });
 }
 
+/** Hoạt động task của workspace; truyền spaceId để chỉ lấy task trong space đó */
 export function useWorkspaceTaskActivity(
   workspaceId: number,
   scope: Scope,
   page: number,
+  spaceId?: number,
 ) {
   return useQuery({
     queryKey: TASK_QUERY_KEYS.feed(scope, page),
-    queryFn: () => taskService.feed(workspaceId, page),
+    queryFn: () => taskService.feed(workspaceId, page, spaceId),
   });
 }
 
@@ -165,6 +178,55 @@ export function useDeleteTask(
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: scope });
       callbacks.onSuccess?.();
+    },
+  });
+}
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+
+/** Bình luận mới nhất trước, tải thêm theo trang */
+export function useTaskComments(
+  workspaceId: number,
+  scope: Scope,
+  taskId: number,
+) {
+  return useInfiniteQuery({
+    queryKey: TASK_QUERY_KEYS.comments(scope, taskId),
+    queryFn: ({ pageParam }) =>
+      taskService.comments(workspaceId, taskId, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (last) =>
+      last.meta.hasNextPage ? last.meta.page + 1 : undefined,
+  });
+}
+
+type CommentMutation =
+  | { type: "create"; dto: TaskCommentInput }
+  | { type: "update"; commentId: number; content: string }
+  | { type: "delete"; commentId: number };
+
+export function useTaskCommentMutation(
+  workspaceId: number,
+  scope: Scope,
+  taskId: number,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CommentMutation) =>
+      input.type === "create"
+        ? taskService.createComment(workspaceId, taskId, input.dto)
+        : input.type === "update"
+          ? taskService.updateComment(
+              workspaceId,
+              taskId,
+              input.commentId,
+              input.content,
+            )
+          : taskService.deleteComment(workspaceId, taskId, input.commentId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: TASK_QUERY_KEYS.comments(scope, taskId),
+      });
     },
   });
 }
