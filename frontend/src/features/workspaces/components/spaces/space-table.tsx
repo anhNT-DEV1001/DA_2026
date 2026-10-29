@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { DataTable, type ColumnDef } from "@/components/common/data-table";
 import { Modal } from "@/components/common/modal";
 import { Button } from "@/components/ui/button";
@@ -12,6 +14,7 @@ import { SpaceDetailModal } from "./space-detail";
 import { SpaceMemberJoinModal } from "./space-member-join";
 import { SpaceFilter } from "./space-filter";
 import { Calendar, FolderOpen, Loader2, Pencil, Trash2, UserPlus, Users } from "lucide-react";
+import { MenuIcon } from "@/features/menus";
 import { cn } from "@/lib/utils";
 
 /** Hiển thị số thành viên đã tham gia space */
@@ -64,6 +67,10 @@ function formatDate(dateStr?: string | null): string {
 }
 
 export function SpaceTable({ workspaceId, className }: SpaceTableProps) {
+  const routeParams = useParams<{ slug?: string }>();
+  const workspaceSlug = routeParams?.slug
+    ? decodeURIComponent(routeParams.slug)
+    : String(workspaceId);
   const permissions = useAuthStore((s) => s.permissions);
 
   const canCreate = React.useMemo(
@@ -143,12 +150,19 @@ export function SpaceTable({ workspaceId, className }: SpaceTableProps) {
         header: "Tên Space",
         accessorKey: "name",
         cell: ({ row }) => (
-          <div className="flex items-center gap-3">
+          <Link
+            href={`/workspaces/${workspaceSlug}/spaces/${row.id}`}
+            className="flex items-center gap-3 group"
+          >
             <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary">
-              <FolderOpen className="size-4" />
+              {row.icon ? (
+                <MenuIcon name={row.icon} className="size-4" />
+              ) : (
+                <FolderOpen className="size-4" />
+              )}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-sm text-foreground truncate max-w-[220px]">
+              <span className="font-semibold text-sm text-foreground group-hover:text-primary truncate max-w-[220px] transition-colors">
                 {row.name}
               </span>
               {row.description && (
@@ -157,7 +171,7 @@ export function SpaceTable({ workspaceId, className }: SpaceTableProps) {
                 </span>
               )}
             </div>
-          </div>
+          </Link>
         ),
       },
       {

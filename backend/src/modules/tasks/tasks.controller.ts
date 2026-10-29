@@ -18,6 +18,7 @@ import {
   AssignTaskDto,
   CreateTaskDto,
   CreateTaskStatusDto,
+  MoveTaskDto,
   TaskListQuery,
   TaskPageQuery,
   UpdateTaskDto,
@@ -172,6 +173,17 @@ export class TasksController {
     @Body() dto: UpdateTaskDto,
   ) {
     return this.tasks.update(workspaceId, taskId, user.id!, dto);
+  }
+
+  @Patch(':taskId/move')
+  @HasPermission('WORKSPACE_UPDATE')
+  move(
+    @Param('workspaceId', ParseIntPipe) workspaceId: number,
+    @Param('taskId', ParseIntPipe) taskId: number,
+    @CurrentUser('user') user: UserResponse,
+    @Body() dto: MoveTaskDto,
+  ) {
+    return this.tasks.move(workspaceId, taskId, user.id!, dto);
   }
 
   @Delete(':taskId')

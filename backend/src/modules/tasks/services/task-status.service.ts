@@ -26,22 +26,44 @@ const DEFAULT_STATUSES = [
   { code: 'done', name: 'Hoàn thành', displayOrder: 3, isCompleted: true },
 ] as const;
 
+export interface InitialTaskStatus {
+  code: string;
+  name: string;
+  isCompleted?: boolean;
+}
+
 @Injectable()
 export class TaskStatusService {
   constructor(private readonly source: DataSource) {}
 
-  /** Call inside the space-creation transaction so creation cannot leave a partial setup. */
+  /**
+   * Call inside the space-creation transaction so creation cannot leave a partial setup.
+   * Seeds the given statuses (in order) or the default set when none are given — never both.
+   */
   async ensureDefaultStatuses(
     manager: EntityManager,
     spaceId: number,
     actorId: number | null,
+    statuses?: InitialTaskStatus[],
   ): Promise<void> {
+    const codes = new Set(statuses?.map((status) => status.code));
+    if (statuses && codes.size !== statuses.length)
+      throw new BadRequestException('Mã trạng thái bị trùng trong space');
+
+    const values = statuses?.length
+      ? statuses.map((status, index) => ({
+          code: status.code,
+          name: status.name,
+          displayOrder: index,
+          isCompleted: status.isCompleted ?? false,
+        }))
+      : DEFAULT_STATUSES;
     await manager
       .createQueryBuilder()
       .insert()
       .into(TaskStatus)
       .values(
-        DEFAULT_STATUSES.map((status) => ({
+        values.map((status) => ({
           ...status,
           spaceId,
           createdBy: actorId,

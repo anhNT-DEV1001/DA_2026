@@ -14,14 +14,9 @@ import { Space } from '../../workspaces/entities/space.entity.js';
 import { TaskStatus } from './task-status.entity.js';
 import { TaskAssigned } from './task-assigned.entity.js';
 
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 @Entity('tasks')
 @Check('CHK_tasks_title', `length(btrim("title")) > 0`)
-@Check(
-  'CHK_tasks_priority',
-  `"priority" IN ('low', 'medium', 'high', 'urgent')`,
-)
 @Check(
   'CHK_tasks_dates',
   `"start_date" IS NULL OR "due_date" IS NULL OR "start_date" <= "due_date"`,
@@ -35,6 +30,9 @@ export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
   where: '"deleted_at" IS NULL',
 })
 @Index('IDX_tasks_space', ['spaceId'], { where: '"deleted_at" IS NULL' })
+@Index('IDX_tasks_space_status_position', ['spaceId', 'statusId', 'position'], {
+  where: '"deleted_at" IS NULL',
+})
 export class Task extends SoftDeleteEntity {
   @Column({ name: 'workspace_id', type: 'int' })
   workspaceId: number;
@@ -84,6 +82,7 @@ export class Task extends SoftDeleteEntity {
   @OneToMany(() => TaskAssigned, (ta) => ta.task)
   assignees: Relation<TaskAssigned>[];
 
+  // Master data value thuộc nhóm PRIORITY (vd: PRIORITY002)
   @Column({ type: 'varchar', length: 255 })
   priority: string;
 
@@ -96,4 +95,8 @@ export class Task extends SoftDeleteEntity {
 
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   completedAt: Date | null;
+
+  // Thứ tự trong cột kanban (tăng dần); số thực để chèn vào giữa hai task
+  @Column({ type: 'double precision', default: 0 })
+  position: number;
 }

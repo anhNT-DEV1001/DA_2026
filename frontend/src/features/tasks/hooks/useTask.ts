@@ -2,13 +2,19 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { taskService } from "../services";
-import type { TaskFilters, TaskInput } from "../types";
+import type { Task, TaskFilters, TaskInput } from "../types";
 
 type Scope = readonly unknown[];
+const _taskBase = ["tasks"] as const;
 export const TASK_QUERY_KEYS = {
-  all: ["tasks"] as const,
+  all: _taskBase,
   workspace: (userId: number | undefined, workspaceId: number) =>
-    [...TASK_QUERY_KEYS.all, userId, workspaceId] as const,
+    [..._taskBase, userId, workspaceId] as const,
+  space: (
+    userId: number | undefined,
+    workspaceId: number,
+    spaceId: number,
+  ) => [..._taskBase, userId, workspaceId, spaceId] as const,
   list: (scope: Scope, filters: TaskFilters, view: "list" | "gantt" = "list") =>
     [...scope, view, filters] as const,
   statuses: (scope: Scope) => [...scope, "statuses"] as const,
@@ -99,7 +105,7 @@ export function useWorkspaceTaskActivity(
 type MutationCallbacks = {
   onMutate?: () => void;
   onSettled?: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (task: Task) => void | Promise<void>;
 };
 
 type SaveTask =
@@ -119,9 +125,31 @@ export function useSaveTask(
         : taskService.update(workspaceId, input.taskId, input.dto),
     onMutate: callbacks.onMutate,
     onSettled: callbacks.onSettled,
+    onSuccess: async (task) => {
+      await callbacks.onSuccess?.(task);
+      await queryClient.invalidateQueries({ queryKey: scope });
+    },
+  });
+}
+
+export function useAssignTask(workspaceId: number, scope: Scope) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, userId }: { taskId: number; userId: number }) =>
+      taskService.assign(workspaceId, taskId, { userId }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: scope });
-      callbacks.onSuccess?.();
+    },
+  });
+}
+
+export function useUnassignTask(workspaceId: number, scope: Scope) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, userId }: { taskId: number; userId: number }) =>
+      taskService.unassign(workspaceId, taskId, userId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: scope });
     },
   });
 }

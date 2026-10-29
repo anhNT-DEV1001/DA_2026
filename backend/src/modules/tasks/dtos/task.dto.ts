@@ -14,7 +14,6 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import type { TaskPriority } from '../entities/task.entity.js';
 import { PaginanteRequest } from '../../../common/requests/paginate.request.js';
 
 export class CreateTaskStatusDto {
@@ -105,12 +104,13 @@ export class CreateTaskDto {
   statusId?: number;
 
   @ApiPropertyOptional({
-    enum: ['low', 'medium', 'high', 'urgent'],
-    default: 'medium',
+    description: 'Master data value nhóm PRIORITY',
+    default: 'PRIORITY002',
   })
   @ValidateIf((_, value) => value !== undefined)
-  @IsIn(['low', 'medium', 'high', 'urgent'])
-  priority?: TaskPriority;
+  @IsString()
+  @MaxLength(255)
+  priority?: string;
 
   @ApiPropertyOptional({ type: String, nullable: true, example: '2026-10-20' })
   @ValidateIf((_, value) => value !== undefined && value !== null)
@@ -128,6 +128,23 @@ export class CreateTaskDto {
 export class UpdateTaskDto extends PartialType(CreateTaskDto, {
   skipNullProperties: false,
 }) {}
+
+export class MoveTaskDto {
+  @ApiProperty({ description: 'Trạng thái (cột) đích' })
+  @IsInt()
+  @Min(1)
+  statusId: number;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Đặt ngay sau task này; null = lên đầu cột',
+  })
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsInt()
+  @Min(1)
+  afterId?: number | null;
+}
 
 export class TaskPageQuery extends PaginanteRequest {
   @ApiPropertyOptional({ default: 1 })
@@ -177,8 +194,25 @@ export class TaskListQuery extends TaskPageQuery {
   @Min(1)
   statusId?: number;
 
-  @ApiPropertyOptional({ enum: ['low', 'medium', 'high', 'urgent'] })
+  @ApiPropertyOptional({ description: 'Lọc theo người phụ trách' })
   @ValidateIf((_, value) => value !== undefined)
-  @IsIn(['low', 'medium', 'high', 'urgent'])
-  priority?: TaskPriority;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  assigneeId?: number;
+
+  @ApiPropertyOptional({ description: 'Master data value nhóm PRIORITY' })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(255)
+  priority?: string;
+
+  @ApiPropertyOptional({
+    enum: ['newest', 'position'],
+    default: 'newest',
+    description: 'position: theo thứ tự trên kanban',
+  })
+  @IsOptional()
+  @IsIn(['newest', 'position'])
+  sort?: 'newest' | 'position';
 }

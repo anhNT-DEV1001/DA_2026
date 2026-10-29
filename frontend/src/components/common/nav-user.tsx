@@ -48,21 +48,21 @@ export function NavUser({
         render={
           <Button
             variant="ghost"
-            className="flex items-center gap-2 px-2 py-1.5 h-auto rounded-lg hover:bg-accent cursor-pointer"
+            className="flex items-center gap-2.5 p-1 xl:pr-2 h-auto rounded-xl hover:bg-accent cursor-pointer"
           >
-            <Avatar className="h-8 w-8 rounded-lg">
+            <Avatar className="h-8 w-8 rounded-full">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="rounded-lg text-xs font-medium">
+              <AvatarFallback className="rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="hidden md:grid flex-1 text-left text-sm leading-tight">
+            <div className="hidden xl:grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{user.name}</span>
-              <span className="truncate text-xs text-muted-foreground">
+              <span className="max-w-44 truncate text-xs text-muted-foreground">
                 {user.email}
               </span>
             </div>
-            <ChevronsUpDown className="hidden md:block ml-auto size-4 text-muted-foreground" />
+            <ChevronsUpDown className="hidden xl:block ml-auto size-4 text-muted-foreground" />
           </Button>
         }
       />

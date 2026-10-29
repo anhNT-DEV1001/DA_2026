@@ -63,7 +63,8 @@ INSERT INTO "menus" (
     (3, 1, 1, 'Danh sách màn hình', '/menus', 'Menu', 'ListMenus', 2, 1, true, true),
     (4, 1, 1, 'Master Data', '/masterdata', 'Database', 'MasterData', 2, 2, true, true),
     (5, 1, 1, 'Nhóm quyền', '/roles', 'UserKey', 'RoleGroup', 2, 3, true, true),
-    (6, 1, 1, 'Người dùng', '/users', 'Users', 'Users', 2, 4, true, true)
+    (6, 1, 1, 'Người dùng', '/users', 'Users', 'Users', 2, 4, true, true),
+    (12, 1, 1, 'Spaces', NULL, 'LayoutList', 'Spaces', 7, 0, true, true)
 ON CONFLICT ("alias") DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('menus', 'id'), COALESCE((SELECT MAX(id) FROM menus), 1), true);
@@ -83,7 +84,7 @@ CROSS JOIN (VALUES
     ('ACTION004', 'DELETE')
 ) AS a(action, suffix)
 JOIN "master_data" md ON md."group" = 'ACTION' AND md.value = a.action AND md.deleted_at IS NULL
-WHERE m.alias IN ('ListMenus', 'MasterData', 'RoleGroup', 'Users', 'Workspace', 'Note')
+WHERE m.alias IN ('ListMenus', 'MasterData', 'RoleGroup', 'Users', 'Workspace', 'Spaces', 'Note')
    OR (m.alias IN ('HomePage', 'System') AND a.suffix = 'VIEW')
 ON CONFLICT ("code") DO NOTHING;
 

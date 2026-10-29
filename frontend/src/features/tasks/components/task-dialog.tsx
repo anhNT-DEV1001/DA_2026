@@ -5,37 +5,66 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  ModalRoot,
+  ModalContent,
+  ModalHeader,
+  ModalTitle,
+  ModalDescription,
+  ModalBody,
+  ModalFooter,
+} from "@/components/common/modal";
+import { ComboboxPicker } from "@/components/common/combobox-picker";
+import { DateTimePicker } from "@/components/common/datetime-picker";
 import {
-  priorityLabels,
+  DEFAULT_PRIORITY,
+  PRIORITY_GROUP,
   type Task,
   type TaskInput,
   type TaskStatus,
-  type Priority,
 } from "../types";
 import type { Person } from "../types";
-import { useTaskDetail, useTaskHistory, useSaveTask } from "../hooks";
-import { TaskError, TaskSelect } from "./task-controls";
+import {
+  useTaskDetail,
+  useTaskHistory,
+  useSaveTask,
+  useAssignTask,
+  useUnassignTask,
+} from "../hooks";
+import { TaskError } from "./task-controls";
+import { MasterDataPicker } from "@/features/masterdata/components/masterdata-picker";
+import { useMasterDataByGroup } from "@/features/masterdata/hooks";
 
 const fieldLabels: Record<string, string> = {
   title: "Tiêu đề",
   description: "Mô tả",
   statusId: "Trạng thái",
-  assigneeId: "Người phụ trách",
+  assigneeIds: "Người phụ trách",
   priority: "Ưu tiên",
   startDate: "Ngày bắt đầu",
   dueDate: "Hạn hoàn thành",
   completedAt: "Hoàn thành lúc",
 };
 
+function toISODate(date: Date | null): string | null {
+  if (!date) return null;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function toLocalDate(iso: string | null): Date | undefined {
+  if (!iso) return undefined;
+  const [y, mo, d] = iso.split("-").map(Number);
+  return new Date(y, mo - 1, d);
+}
+
 type Props = {
   workspaceId: number;
+  spaceId?: number;
   taskId: number | null;
+  /** Trạng thái mặc định khi tạo task mới (vd: tạo từ một cột trên board) */
+  defaultStatusId?: number;
   statuses: TaskStatus[];
   people: Person[];
   names: Map<number, string>;
@@ -47,34 +76,41 @@ type Props = {
 export function TaskDialog(props: Props) {
   const [saving, setSaving] = useState(false);
   const detail = useTaskDetail(props.workspaceId, props.queryKey, props.taskId);
+
   return (
-    <Dialog
+    <ModalRoot
       open
       onOpenChange={(open) => {
         if (!open && !saving) props.onClose();
       }}
     >
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <ModalContent size="2xl">
+        <ModalHeader>
+          <ModalTitle>
             {props.taskId === null ? "Tạo task" : "Chi tiết task"}
-          </DialogTitle>
-          <DialogDescription>
+          </ModalTitle>
+          <ModalDescription>
             Nội dung, người phụ trách và kế hoạch thực hiện.
-          </DialogDescription>
-        </DialogHeader>
-        {props.taskId !== null && detail.isPending ? (
-          <p role="status">Đang tải task…</p>
-        ) : detail.isError ? (
-          <TaskError error={detail.error} retry={() => void detail.refetch()} />
-        ) : (
-          <TaskForm {...props} task={detail.data} onSavingChange={setSaving} />
-        )}
-        {props.taskId !== null && (
-          <TaskHistory {...props} taskId={props.taskId} />
-        )}
-      </DialogContent>
-    </Dialog>
+          </ModalDescription>
+        </ModalHeader>
+
+        <ModalBody>
+          {props.taskId !== null && detail.isPending ? (
+            <p role="status">Đang tải task…</p>
+          ) : detail.isError ? (
+            <TaskError
+              error={detail.error}
+              retry={() => void detail.refetch()}
+            />
+          ) : (
+            <TaskForm {...props} task={detail.data} onSavingChange={setSaving} />
+          )}
+          {props.taskId !== null && (
+            <TaskHistory {...props} taskId={props.taskId} />
+          )}
+        </ModalBody>
+      </ModalContent>
+    </ModalRoot>
   );
 }
 
@@ -87,19 +123,42 @@ function TaskForm({
     title: task?.title ?? "",
     description: task?.description ?? null,
     statusId:
-      task?.statusId ?? props.statuses.find((s) => s.code === "todo")?.id,
-    assigneeId: task?.assigneeId ?? null,
-    priority: task?.priority ?? "medium",
+      task?.statusId ??
+      props.defaultStatusId ??
+      props.statuses.find((s) => s.code === "todo")?.id,
+    priority: task?.priority ?? DEFAULT_PRIORITY,
     startDate: task?.startDate ?? null,
     dueDate: task?.dueDate ?? null,
+    spaceId: props.spaceId,
   }));
   const [form, setForm] = useState(initial);
+  // Assignee IDs managed separately from the task DTO
+  const [assigneeIds, setAssigneeIds] = useState<number[]>(
+    task?.assigneeIds ?? [],
+  );
   const [validation, setValidation] = useState("");
+
+  const assign = useAssignTask(props.workspaceId, props.queryKey);
+  const unassign = useUnassignTask(props.workspaceId, props.queryKey);
+
   const mutation = useSaveTask(props.workspaceId, props.queryKey, {
     onMutate: () => onSavingChange(true),
     onSettled: () => onSavingChange(false),
-    onSuccess: props.onClose,
+    onSuccess: async (saved) => {
+      // Apply assignee diff after task save
+      const prev = task?.assigneeIds ?? [];
+      const toAdd = assigneeIds.filter((id) => !prev.includes(id));
+      const toRemove = prev.filter((id) => !assigneeIds.includes(id));
+      await Promise.all([
+        ...toAdd.map((userId) => assign.mutateAsync({ taskId: saved.id, userId })),
+        ...toRemove.map((userId) =>
+          unassign.mutateAsync({ taskId: saved.id, userId }),
+        ),
+      ]);
+      props.onClose();
+    },
   });
+
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!form.title.trim()) {
@@ -121,22 +180,46 @@ function TaskForm({
     if (task) mutation.mutate({ taskId: task.id, dto: changed });
     else mutation.mutate({ taskId: null, dto: value });
   }
+
   const disabled = !props.canEdit || mutation.isPending;
+
+  const statusItems = props.statuses.map((s) => ({ id: s.id, name: s.name }));
+
+  // Include any former assignees still selected (e.g. inactive members)
+  const assigneeItemsMap = new Map(
+    props.people.map((p) => [p.id, p.name]),
+  );
+  for (const id of assigneeIds) {
+    if (!assigneeItemsMap.has(id)) {
+      assigneeItemsMap.set(
+        id,
+        props.names.get(id) ?? `Người dùng #${id}`,
+      );
+    }
+  }
+  const assigneeItems = [...assigneeItemsMap.entries()].map(([id, name]) => ({
+    id,
+    name,
+  }));
+
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <fieldset disabled={disabled} className="space-y-4 disabled:opacity-80">
+    <form id="task-form" onSubmit={submit} className="space-y-4">
+      <div className="space-y-4">
         <label className="block space-y-1 text-sm">
           Tiêu đề <span aria-hidden>*</span>
           <Input
+            disabled={disabled}
             value={form.title}
             required
             maxLength={255}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
           />
         </label>
+
         <label className="block space-y-1 text-sm">
           Mô tả
           <Textarea
+            disabled={disabled}
             rows={3}
             maxLength={20000}
             value={form.description ?? ""}
@@ -145,89 +228,77 @@ function TaskForm({
             }
           />
         </label>
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-1 text-sm">
-            Trạng thái
-            <TaskSelect
-              value={form.statusId ?? ""}
-              required
-              onChange={(e) =>
-                setForm({ ...form, statusId: Number(e.target.value) })
+          <div className="space-y-1 text-sm">
+            <span>Trạng thái</span>
+            <ComboboxPicker
+              items={statusItems}
+              value={form.statusId ? String(form.statusId) : ""}
+              onValueChange={(val) =>
+                setForm({ ...form, statusId: val ? Number(val) : undefined })
               }
-            >
-              {props.statuses.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </TaskSelect>
-          </label>
-          <label className="space-y-1 text-sm">
-            Ưu tiên
-            <TaskSelect
+              placeholder="Chọn trạng thái"
+              disabled={disabled}
+              triggerClassName="h-9 w-full text-sm"
+            />
+          </div>
+
+          <div className="space-y-1 text-sm">
+            <span>Ưu tiên</span>
+            <MasterDataPicker
+              group={PRIORITY_GROUP}
               value={form.priority}
-              onChange={(e) =>
-                setForm({ ...form, priority: e.target.value as Priority })
+              onValueChange={(val) => setForm({ ...form, priority: val })}
+              placeholder="Chọn mức ưu tiên"
+              disabled={disabled}
+              triggerClassName="h-9 w-full text-sm"
+            />
+          </div>
+
+          <div className="space-y-1 text-sm sm:col-span-2">
+            <span>Người phụ trách</span>
+            <ComboboxPicker
+              multiSelect
+              items={assigneeItems}
+              selectedValues={assigneeIds.map(String)}
+              onSelectedValuesChange={(vals) =>
+                setAssigneeIds(vals.map(Number))
               }
-            >
-              {Object.entries(priorityLabels).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </TaskSelect>
-          </label>
-          <label className="space-y-1 text-sm sm:col-span-2">
-            Người phụ trách
-            <TaskSelect
-              value={form.assigneeId ?? ""}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  assigneeId: e.target.value ? Number(e.target.value) : null,
-                })
-              }
-            >
-              <option value="">Chưa giao</option>
-              {form.assigneeId &&
-                !props.people.some((p) => p.id === form.assigneeId) && (
-                  <option value={form.assigneeId} disabled>
-                    {props.names.get(form.assigneeId) ??
-                      `Người dùng #${form.assigneeId}`}{" "}
-                    (không còn hoạt động)
-                  </option>
-                )}
-              {props.people.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </TaskSelect>
-          </label>
-          <label className="space-y-1 text-sm">
-            Ngày bắt đầu
-            <Input
-              type="date"
-              value={form.startDate ?? ""}
-              max={form.dueDate ?? undefined}
-              onChange={(e) =>
-                setForm({ ...form, startDate: e.target.value || null })
+              placeholder="Chọn người phụ trách"
+              disabled={disabled}
+              triggerClassName="h-9 w-full text-sm"
+            />
+          </div>
+
+          <div className="space-y-1 text-sm">
+            <span>Ngày bắt đầu</span>
+            <DateTimePicker
+              mode="date"
+              value={form.startDate}
+              maxDate={toLocalDate(form.dueDate)}
+              disabled={disabled}
+              onChange={(date) =>
+                setForm({ ...form, startDate: toISODate(date) })
               }
             />
-          </label>
-          <label className="space-y-1 text-sm">
-            Hạn hoàn thành
-            <Input
-              type="date"
-              value={form.dueDate ?? ""}
-              min={form.startDate ?? undefined}
-              onChange={(e) =>
-                setForm({ ...form, dueDate: e.target.value || null })
+          </div>
+
+          <div className="space-y-1 text-sm">
+            <span>Hạn hoàn thành</span>
+            <DateTimePicker
+              mode="date"
+              value={form.dueDate}
+              minDate={toLocalDate(form.startDate)}
+              disabled={disabled}
+              onChange={(date) =>
+                setForm({ ...form, dueDate: toISODate(date) })
               }
             />
-          </label>
+          </div>
         </div>
-      </fieldset>
+      </div>
+
       {task?.completedAt && (
         <p className="text-sm text-muted-foreground">
           Hoàn thành: {new Date(task.completedAt).toLocaleString("vi-VN")}
@@ -239,10 +310,15 @@ function TaskForm({
         </p>
       )}
       {mutation.isError && <TaskError error={mutation.error} />}
-      <div className="flex justify-end gap-2">
+      {(assign.isError || unassign.isError) && (
+        <TaskError error={assign.error ?? unassign.error} />
+      )}
+
+      <ModalFooter bordered>
         <Button
           type="button"
           variant="outline"
+          size="sm"
           disabled={mutation.isPending}
           onClick={props.onClose}
         >
@@ -251,12 +327,13 @@ function TaskForm({
         {props.canEdit && (
           <Button
             type="submit"
+            size="sm"
             disabled={mutation.isPending || !props.statuses.length}
           >
             {mutation.isPending ? "Đang lưu…" : "Lưu task"}
           </Button>
         )}
-      </div>
+      </ModalFooter>
     </form>
   );
 }
@@ -269,6 +346,7 @@ function TaskHistory(props: Props & { taskId: number }) {
     props.taskId,
     page,
   );
+  const priorities = useMasterDataByGroup(PRIORITY_GROUP);
   function format(key: string, value: unknown): string {
     if (value === null || value === undefined || value === "") return "Chưa có";
     if (key === "statusId")
@@ -276,16 +354,23 @@ function TaskHistory(props: Props & { taskId: number }) {
         props.statuses.find((s) => s.id === value)?.name ??
         `Trạng thái #${value}`
       );
-    if (key === "assigneeId")
-      return props.names.get(Number(value)) ?? `Người dùng #${value}`;
+    if (key === "assigneeIds") {
+      const ids = Array.isArray(value) ? (value as number[]) : [];
+      if (!ids.length) return "Chưa giao";
+      return ids
+        .map((id) => props.names.get(id) ?? `Người dùng #${id}`)
+        .join(", ");
+    }
     if (key === "priority")
-      return priorityLabels[value as Priority] ?? String(value);
+      return (
+        priorities.data?.find((p) => p.value === value)?.name ?? String(value)
+      );
     if (key === "completedAt")
       return new Date(String(value)).toLocaleString("vi-VN");
     return String(value);
   }
   return (
-    <section className="space-y-3 border-t pt-4">
+    <section className="space-y-3 border-t pt-4 mt-4">
       <h3 className="font-semibold">Lịch sử task</h3>
       {history.isPending ? (
         <p role="status" className="text-sm">
@@ -326,7 +411,8 @@ function TaskHistory(props: Props & { taskId: number }) {
                     (key) =>
                       key in fieldLabels &&
                       (item.action !== "updated" ||
-                        item.before?.[key] !== item.after?.[key]),
+                        JSON.stringify(item.before?.[key]) !==
+                          JSON.stringify(item.after?.[key])),
                   )
                   .map((key) => (
                     <p

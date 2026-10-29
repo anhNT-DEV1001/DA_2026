@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
+  Check,
   ChevronRight,
+  ChevronsUpDown,
   Command,
   PanelLeftClose,
   Plus,
@@ -19,6 +21,15 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/common/modal";
 import { QuickTools } from "@/components/common/quick-tools";
 import { toast } from "@/components/ui/toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -118,7 +129,7 @@ function enrichMenusWithWorkspaces(
           id: 200000 + space.id,
           name: space.name,
           route: `/workspaces/${ws.slug || ws.id}/spaces/${space.id}`,
-          icon: "LayoutList",
+          icon: space.icon || "LayoutList",
           alias: `space_${ws.slug || ws.id}_${space.id}`,
           parentId: 100000 + ws.id,
           displayOrder: space.displayOrder ?? 0,
@@ -155,7 +166,11 @@ function enrichMenusWithWorkspaces(
     if (menu.children && menu.children.length > 0) {
       return {
         ...menu,
-        children: enrichMenusWithWorkspaces(menu.children, workspaces, spacesMap),
+        children: enrichMenusWithWorkspaces(
+          menu.children,
+          workspaces,
+          spacesMap,
+        ),
       };
     }
 
@@ -479,6 +494,87 @@ function SidebarTreeNode({
   );
 }
 
+/**
+ * Dropdown chọn workspace hiện tại ở header sub-sidebar (thay cho tiêu đề tĩnh)
+ */
+function WorkspaceSwitcher({
+  workspaces,
+  currentWorkspace,
+  onSelect,
+  onAddWorkspace,
+  onDeleteWorkspace,
+}: {
+  workspaces: WorkspaceItem[];
+  currentWorkspace: WorkspaceItem | null;
+  onSelect: (workspace: WorkspaceItem) => void;
+  onAddWorkspace: () => void;
+  onDeleteWorkspace: (workspace: WorkspaceItem) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            className="h-auto w-full justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-muted cursor-pointer"
+          >
+            <div className="flex items-center gap-2 truncate">
+              <div className="flex aspect-square size-7 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
+                {currentWorkspace?.name?.charAt(0).toUpperCase() || "W"}
+              </div>
+              <div className="grid text-left leading-tight truncate">
+                <span className="truncate text-sm font-semibold text-foreground">
+                  {currentWorkspace?.name || "Chọn workspace"}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {currentWorkspace?.mode === "public"
+                    ? "Công khai"
+                    : "Riêng tư"}
+                </span>
+              </div>
+            </div>
+            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent className="w-64 rounded-lg" sideOffset={6}>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+          {workspaces.map((ws) => (
+            <DropdownMenuItem
+              key={ws.id}
+              className="cursor-pointer"
+              onClick={() => onSelect(ws)}
+            >
+              <MenuIcon
+                name={ws.mode === "public" ? "Globe" : "Folder"}
+                className="size-4 text-muted-foreground"
+              />
+              <span className="flex-1 truncate">{ws.name}</span>
+              {currentWorkspace?.id === ws.id && <Check className="size-4" />}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer" onClick={onAddWorkspace}>
+          <Plus className="size-4" />
+          <span>Thêm workspace</span>
+        </DropdownMenuItem>
+        {/* {currentWorkspace && (
+          <DropdownMenuItem
+            variant="destructive"
+            className="cursor-pointer"
+            onClick={() => onDeleteWorkspace(currentWorkspace)}
+          >
+            <Trash2 className="size-4" />
+            <span className="truncate">Xóa workspace hiện tại</span>
+          </DropdownMenuItem>
+        )} */}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function MobileTreeSidebar({
   menus,
   isLoading,
@@ -668,6 +764,7 @@ function MobileTreeSidebar({
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { setOpen, isMobile, setOpenMobile } = useSidebar();
 
@@ -690,6 +787,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [workspaceToDelete, setWorkspaceToDelete] =
     React.useState<WorkspaceItem | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = React.useState<
+    number | null
+  >(null);
 
   const [selectedMenuId, setSelectedMenuId] = React.useState<number | null>(
     null,
@@ -709,8 +809,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return enrichMenusWithWorkspaces(permittedMenus, myWorkspaces, spacesMap);
   }, [rawSidebarMenus, permissions, myWorkspaces, spacesMap]);
 
-  const isLoading =
-    isLoadingMenus || isLoadingWorkspaces || !isAuthInitialized;
+  const isLoading = isLoadingMenus || isLoadingWorkspaces || !isAuthInitialized;
 
   // Tìm menu cha tương ứng với route hiện tại (dẫn xuất trực tiếp trong render)
   const matchedParentId = React.useMemo(() => {
@@ -746,13 +845,75 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ? isWorkspaceMenuItem(activeMenu)
     : false;
 
+  // Workspace hiện tại: ưu tiên theo route -> user chọn trong dropdown -> workspace đầu tiên
+  const currentWorkspace = React.useMemo(() => {
+    if (myWorkspaces.length === 0) return null;
+    const fromRoute = myWorkspaces.find((ws) => {
+      const route = `/workspaces/${ws.slug || ws.id}`;
+      return pathname === route || pathname.startsWith(`${route}/`);
+    });
+    return (
+      fromRoute ??
+      myWorkspaces.find((ws) => ws.id === selectedWorkspaceId) ??
+      myWorkspaces[0]
+    );
+  }, [myWorkspaces, pathname, selectedWorkspaceId]);
+
+  // Menu đang chọn là Workspace hoặc chứa menu Workspace (vd: Workspaces nằm dưới Trang chủ)
+  const hasWorkspaceMenu =
+    isActiveMenuWorkspace ||
+    Boolean(
+      (activeMenu?.children as ExtendedMenuItem[] | undefined)?.some(
+        isWorkspaceMenuItem,
+      ),
+    );
+
   // Danh sách các menu con của menu đang chọn (lọc active và sắp xếp)
+  // Với menu Workspace: chỉ hiển thị spaces của workspace hiện tại (+ các menu con tĩnh khác)
   const subMenus = React.useMemo(() => {
     if (!activeMenu?.children) return [];
-    return (activeMenu.children as ExtendedMenuItem[])
+
+    const scopeToCurrentWorkspace = (items: ExtendedMenuItem[] = []) => {
+      const currentNode = items.find(
+        (c) => c.rawWorkspace?.id === currentWorkspace?.id,
+      );
+      return [
+        ...((currentNode?.children as ExtendedMenuItem[]) ?? []),
+        ...items.filter((c) => !c.rawWorkspace),
+      ];
+    };
+
+    const children = isActiveMenuWorkspace
+      ? scopeToCurrentWorkspace(activeMenu.children as ExtendedMenuItem[])
+      : (activeMenu.children as ExtendedMenuItem[]).map((c) =>
+          // Thay node Workspace bằng node "Spaces" chứa spaces của workspace hiện tại
+          // (việc chọn/thêm workspace đã chuyển lên dropdown ở header)
+          isWorkspaceMenuItem(c)
+            ? {
+                ...c,
+                name: "Spaces",
+                alias: "Spaces",
+                icon: "LayoutList",
+                route: currentWorkspace
+                  ? `/workspaces/${currentWorkspace.slug || currentWorkspace.id}`
+                  : c.route,
+                children: scopeToCurrentWorkspace(
+                  c.children as ExtendedMenuItem[],
+                ),
+              }
+            : c,
+        );
+
+    return children
       .filter((c) => c.isActive !== false && c.isSideBarDisplay !== false)
       .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-  }, [activeMenu]);
+  }, [activeMenu, isActiveMenuWorkspace, currentWorkspace]);
+
+  const handleSelectWorkspace = (ws: WorkspaceItem) => {
+    setSelectedWorkspaceId(ws.id);
+    setSearchTerm("");
+    router.push(`/workspaces/${ws.slug || ws.id}`);
+  };
 
   // Xử lý xác nhận xóa workspace
   const handleConfirmDelete = async () => {
@@ -859,8 +1020,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const matchingIds = new Set<number>();
     const findMatchingNodes = (items: ExtendedMenuItem[]) => {
       items.forEach((item) => {
-        const matchChildren = (item.children as ExtendedMenuItem[])?.some(
-          (c) => c.name.toLowerCase().includes(term),
+        const matchChildren = (item.children as ExtendedMenuItem[])?.some((c) =>
+          c.name.toLowerCase().includes(term),
         );
         if (matchChildren) {
           matchingIds.add(item.id);
@@ -997,29 +1158,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className={cn("hidden flex-1 md:flex", !isSubOpen && "md:hidden")}
             >
               <SidebarHeader className="gap-3.5 border-b py-2 px-4">
-                <div className="flex w-full items-center justify-between">
-                  <div className="text-base font-semibold text-foreground truncate">
-                    {activeMenu?.name || "Danh mục"}
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {/* Nút + thêm workspace khi đang ở menu Workspace */}
-                    {isActiveMenuWorkspace && (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="size-7 text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
-                        onClick={() => setIsCreateWorkspaceOpen(true)}
-                        title="Thêm workspace mới"
-                      >
-                        <Plus className="size-4" />
-                        <span className="sr-only">Thêm workspace</span>
-                      </Button>
-                    )}
+                {hasWorkspaceMenu && myWorkspaces.length > 0 ? (
+                  // Menu Workspace: dropdown chọn / thêm workspace
+                  <WorkspaceSwitcher
+                    workspaces={myWorkspaces}
+                    currentWorkspace={currentWorkspace}
+                    onSelect={handleSelectWorkspace}
+                    onAddWorkspace={() => setIsCreateWorkspaceOpen(true)}
+                    onDeleteWorkspace={(ws) => setWorkspaceToDelete(ws)}
+                  />
+                ) : (
+                  <div className="flex w-full items-center justify-between">
+                    <div className="text-base font-semibold text-foreground truncate">
+                      {activeMenu?.name || "Danh mục"}
+                    </div>
                     {/* Nút ẩn sub-sidebar */}
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      className="size-7 text-muted-foreground hover:text-foreground cursor-pointer"
+                      className="size-7 shrink-0 text-muted-foreground hover:text-foreground cursor-pointer"
                       onClick={() => setIsSubOpen(false)}
                       title="Ẩn menu con"
                     >
@@ -1027,7 +1184,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <span className="sr-only">Ẩn menu con</span>
                     </Button>
                   </div>
-                </div>
+                )}
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                   <SidebarInput
@@ -1050,7 +1207,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       </div>
                     ) : subMenus.length === 0 ? (
                       <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground text-sm gap-2">
-                        {isActiveMenuWorkspace ? (
+                        {isActiveMenuWorkspace && currentWorkspace ? (
+                          <span>Workspace này chưa có space nào</span>
+                        ) : isActiveMenuWorkspace ? (
                           <>
                             <span>Chưa có workspace nào</span>
                             <Button
@@ -1093,9 +1252,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             onAddWorkspace={() =>
                               setIsCreateWorkspaceOpen(true)
                             }
-                            onDeleteWorkspace={(ws) =>
-                              setWorkspaceToDelete(ws)
-                            }
+                            onDeleteWorkspace={(ws) => setWorkspaceToDelete(ws)}
                             depth={0}
                           />
                         ))}

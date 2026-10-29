@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   Briefcase,
   FolderOpen,
-  ListTodo,
   Globe,
   Info,
   Lock,
@@ -26,9 +25,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
-import { WorkspaceTasks } from "@/features/tasks";
 
-type TabKey = "info" | "spaces" | "members" | "tasks";
+type TabKey = "info" | "spaces" | "members";
 
 export default function WorkspaceDetailPage() {
   const router = useRouter();
@@ -44,9 +42,7 @@ export default function WorkspaceDetailPage() {
   // Lấy tab từ URL query param nếu có (ví dụ ?tab=members), mặc định là 'info'
   const tabFromUrl = searchParams.get("tab") as TabKey | null;
   const activeTab: TabKey =
-    tabFromUrl === "spaces" ||
-    tabFromUrl === "members" ||
-    tabFromUrl === "tasks"
+    tabFromUrl === "spaces" || tabFromUrl === "members"
       ? tabFromUrl
       : "info";
 
@@ -276,23 +272,6 @@ export default function WorkspaceDetailPage() {
           )}
         </button>
 
-        <button
-          type="button"
-          onClick={() => handleTabChange("tasks")}
-          aria-current={activeTab === "tasks" ? "page" : undefined}
-          className={cn(
-            "relative flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors focus-visible:outline-2 cursor-pointer",
-            activeTab === "tasks"
-              ? "text-primary"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <ListTodo className="size-4" aria-hidden="true" />
-          <span>Task</span>
-          {activeTab === "tasks" && (
-            <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary rounded-t-sm" />
-          )}
-        </button>
       </div>
 
       {/* Tab Panels */}
@@ -301,8 +280,6 @@ export default function WorkspaceDetailPage() {
           <WorkspaceInfo workspace={workspace} canEdit={canUpdate} />
         ) : activeTab === "spaces" ? (
           <SpaceTable key={workspace.id} workspaceId={workspace.id} />
-        ) : activeTab === "tasks" ? (
-          <WorkspaceTasks key={workspace.id} workspace={workspace} />
         ) : (
           <WorkspaceMember
             workspaceId={workspace.id}

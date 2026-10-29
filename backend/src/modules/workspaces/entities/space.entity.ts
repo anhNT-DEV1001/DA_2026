@@ -13,6 +13,9 @@ export class Space extends SoftDeleteEntity {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  icon: string | null;
+
   @Column({ name: 'display_order', type: 'int', default: 1 })
   displayOrder: number;
 

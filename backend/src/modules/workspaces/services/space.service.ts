@@ -84,6 +84,7 @@ export class SpaceService {
       const space = manager.getRepository(Space).create({
         name: dto.name.trim(),
         description: dto.description?.trim() ?? null,
+        icon: dto.icon?.trim() || null,
         displayOrder: dto.displayOrder ?? 1,
         workspaceId,
         createdBy: user?.id ?? null,
@@ -94,6 +95,7 @@ export class SpaceService {
         manager,
         space.id,
         user?.id ?? null,
+        dto.statuses,
       );
       return space;
     });
@@ -124,6 +126,10 @@ export class SpaceService {
 
     if (dto.description !== undefined) {
       space.description = dto.description?.trim() ?? null;
+    }
+
+    if (dto.icon !== undefined) {
+      space.icon = dto.icon?.trim() || null;
     }
 
     if (dto.displayOrder !== undefined) {

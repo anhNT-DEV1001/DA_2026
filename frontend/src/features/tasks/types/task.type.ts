@@ -1,25 +1,25 @@
-export type Priority = "low" | "medium" | "high" | "urgent";
-export const priorityLabels: Record<Priority, string> = {
-  low: "Thấp",
-  medium: "Trung bình",
-  high: "Cao",
-  urgent: "Khẩn cấp",
-};
+/** Master data value thuộc nhóm PRIORITY (vd: PRIORITY002) */
+export type Priority = string;
+export const PRIORITY_GROUP = "PRIORITY";
+export const DEFAULT_PRIORITY = "PRIORITY002";
+export const HIGH_PRIORITY = "PRIORITY001";
 export interface TaskInput {
   title: string;
   description: string | null;
   statusId?: number;
-  assigneeId: number | null;
   priority: Priority;
   startDate: string | null;
   dueDate: string | null;
+  spaceId?: number;
 }
 export interface Task extends TaskInput {
   id: number;
   workspaceId: number;
   statusId: number;
+  assigneeIds: number[];
   completedAt: string | null;
   createdAt: string | null;
+  position: number;
 }
 export interface TaskStatus {
   id: number;
@@ -62,6 +62,7 @@ export interface Page<T> {
     hasNextPage: boolean;
   };
 }
+export type TaskView = "list" | "board" | "activity";
 export interface TaskFilters {
   from?: string;
   to?: string;
@@ -70,7 +71,9 @@ export interface TaskFilters {
   search?: string;
   statusId?: number;
   assigneeId?: number;
-  priority?: Priority;
+  priority?: string;
+  spaceId?: number;
+  sort?: "newest" | "position";
 }
 /** Snapshot stored in activity log — fields are denormalized for history display. */
 export interface TaskSnapshot {
@@ -95,4 +98,4 @@ export interface Activity {
   after: TaskSnapshot | null;
 }
 
-export type Person = { id: number; name: string };
+export type Person = { id: number; name: string; avatar?: string | null };

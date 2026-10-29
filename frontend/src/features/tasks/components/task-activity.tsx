@@ -17,7 +17,7 @@ export function WorkspaceTaskActivity(props: TaskTimelineProps) {
     title: "tiêu đề",
     description: "mô tả",
     statusId: "trạng thái",
-    assigneeId: "người phụ trách",
+    assigneeIds: "người phụ trách",
     priority: "ưu tiên",
     startDate: "ngày bắt đầu",
     dueDate: "hạn hoàn thành",

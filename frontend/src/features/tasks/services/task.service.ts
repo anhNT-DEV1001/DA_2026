@@ -42,6 +42,14 @@ export const taskService = {
   update: (workspaceId: number, taskId: number, dto: Partial<TaskInput>) =>
     apiClient.patch<unknown, Task>(`${path(workspaceId)}/${taskId}`, dto),
 
+  /** Kéo thả kanban: đặt task vào cột statusId, ngay sau afterId (null = đầu cột) */
+  move: (
+    workspaceId: number,
+    taskId: number,
+    dto: { statusId: number; afterId: number | null },
+  ) =>
+    apiClient.patch<unknown, Task>(`${path(workspaceId)}/${taskId}/move`, dto),
+
   remove: (workspaceId: number, taskId: number) =>
     apiClient.delete<unknown, { id: number }>(`${path(workspaceId)}/${taskId}`),
 
