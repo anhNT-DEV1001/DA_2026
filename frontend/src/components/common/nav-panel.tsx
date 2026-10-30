@@ -42,6 +42,7 @@ import {
   type SpaceItem,
   type WorkspaceItem,
 } from "@/features/workspaces";
+import { CHAT_ROUTE, ChatNavPanel } from "@/features/chats";
 import { useAppShellStore } from "@/stores/app-shell-store";
 
 const rowClass =
@@ -521,6 +522,13 @@ export function NavPanel() {
         findMenuByAlias(activeRoot.children ?? [], MENU_ALIAS.workspace)),
   );
 
+  // Menu gốc "Hội thoại": panel hiện danh sách cuộc trò chuyện thay cho menu con
+  const isChatRoot = Boolean(
+    activeRoot &&
+      (isAlias(activeRoot, MENU_ALIAS.chat) ||
+        menuHref(activeRoot.route) === CHAT_ROUTE),
+  );
+
   const handleSelectWorkspace = (ws: WorkspaceItem) => {
     setSelectedWorkspaceId(ws.id);
     setQuery("");
@@ -568,6 +576,15 @@ export function NavPanel() {
       <div className="p-3">
         {isLoading ? (
           <Skeleton className="h-13 w-full rounded-xl" />
+        ) : isChatRoot ? (
+          // Chat theo workspace: đổi workspace chỉ đổi danh sách, không rời trang
+          <WorkspaceSwitcher
+            workspaces={workspaces}
+            currentWorkspace={currentWorkspace}
+            manageHref={menuHref(workspaceMenu?.route)}
+            onSelect={(ws) => setSelectedWorkspaceId(ws.id)}
+            onAddWorkspace={() => setIsCreateWorkspaceOpen(true)}
+          />
         ) : showWorkspaceSwitcher ? (
           <WorkspaceSwitcher
             workspaces={workspaces}
@@ -590,59 +607,78 @@ export function NavPanel() {
           </div>
         )}
 
-        <label className="group/search mt-2 flex h-9 cursor-text items-center gap-2 rounded-lg border border-input bg-background px-2.5 text-sm text-muted-foreground shadow-xs transition-[border-color,box-shadow,color] duration-200 ease-out hover:border-ring/60 focus-within:border-primary focus-within:text-foreground focus-within:ring-3 focus-within:ring-primary/20 motion-reduce:transition-none dark:bg-input/30">
-          <Search
-            className="size-4 shrink-0 transition-colors duration-200 group-focus-within/search:text-primary"
-            aria-hidden="true"
-          />
-          <span className="sr-only">Tìm kiếm menu</span>
-          <input
-            ref={searchRef}
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm kiếm menu..."
-            className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground/80 [&::-webkit-search-cancel-button]:cursor-pointer"
-          />
-          <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-sans text-[11px] font-medium leading-none text-muted-foreground transition-opacity duration-200 group-focus-within/search:opacity-0">
-            /
-          </kbd>
-        </label>
-      </div>
-
-      <div className="flex flex-1 flex-col overflow-y-auto px-3 pb-3">
-        {isLoading ? (
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-9 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : hasVisibleMenu ? (
-          // key theo menu gốc: đổi menu trên dock thì danh sách trượt nhẹ vào
-          <ul
-            key={activeRoot?.id}
-            className="flex flex-col gap-0.5 animate-in fade-in-0 slide-in-from-left-2 duration-300 ease-out motion-reduce:animate-none"
-          >
-            {menuNodes}
-          </ul>
-        ) : (
-          <div className="flex flex-col items-center gap-2 p-6 text-center text-sm text-muted-foreground">
-            <span>
-              {normalizedQuery
-                ? `Không tìm thấy menu "${query.trim()}"`
-                : "Không có menu con"}
-            </span>
-            {!normalizedQuery && menuHref(activeRoot?.route) && (
-              <Link
-                href={menuHref(activeRoot?.route)!}
-                className="text-xs text-primary underline underline-offset-4 hover:opacity-80"
-              >
-                Đi tới {activeRoot?.name}
-              </Link>
-            )}
-          </div>
+        {!isChatRoot && (
+          <label className="group/search mt-2 flex h-9 cursor-text items-center gap-2 rounded-lg border border-input bg-background px-2.5 text-sm text-muted-foreground shadow-xs transition-[border-color,box-shadow,color] duration-200 ease-out hover:border-ring/60 focus-within:border-primary focus-within:text-foreground focus-within:ring-3 focus-within:ring-primary/20 motion-reduce:transition-none dark:bg-input/30">
+            <Search
+              className="size-4 shrink-0 transition-colors duration-200 group-focus-within/search:text-primary"
+              aria-hidden="true"
+            />
+            <span className="sr-only">Tìm kiếm menu</span>
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Tìm kiếm menu..."
+              className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground/80 [&::-webkit-search-cancel-button]:cursor-pointer"
+            />
+            <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-sans text-[11px] font-medium leading-none text-muted-foreground transition-opacity duration-200 group-focus-within/search:opacity-0">
+              /
+            </kbd>
+          </label>
         )}
       </div>
+
+      {isChatRoot ? (
+        <div className="min-h-0 flex-1 border-t border-border">
+          {isLoading ? null : currentWorkspace ? (
+            <React.Suspense>
+              <ChatNavPanel
+                key={currentWorkspace.id}
+                workspaceId={currentWorkspace.id}
+              />
+            </React.Suspense>
+          ) : (
+            <p className="p-6 text-center text-sm text-muted-foreground">
+              Tham gia một workspace để bắt đầu trò chuyện
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-1 flex-col overflow-y-auto px-3 pb-3">
+          {isLoading ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : hasVisibleMenu ? (
+            // key theo menu gốc: đổi menu trên dock thì danh sách trượt nhẹ vào
+            <ul
+              key={activeRoot?.id}
+              className="flex flex-col gap-0.5 animate-in fade-in-0 slide-in-from-left-2 duration-300 ease-out motion-reduce:animate-none"
+            >
+              {menuNodes}
+            </ul>
+          ) : (
+            <div className="flex flex-col items-center gap-2 p-6 text-center text-sm text-muted-foreground">
+              <span>
+                {normalizedQuery
+                  ? `Không tìm thấy menu "${query.trim()}"`
+                  : "Không có menu con"}
+              </span>
+              {!normalizedQuery && menuHref(activeRoot?.route) && (
+                <Link
+                  href={menuHref(activeRoot?.route)!}
+                  className="text-xs text-primary underline underline-offset-4 hover:opacity-80"
+                >
+                  Đi tới {activeRoot?.name}
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {showWorkspaceSwitcher && currentWorkspace && canAddWorkspaceMember && (
         <div className="border-t border-border p-3">
@@ -674,9 +710,7 @@ export function NavPanel() {
           workspaceId={currentWorkspace.id}
           open={isCreateSpaceOpen}
           onOpenChange={setIsCreateSpaceOpen}
-          onSuccess={(saved) =>
-            router.push(spaceHref(currentWorkspace, saved))
-          }
+          onSuccess={(saved) => router.push(spaceHref(currentWorkspace, saved))}
         />
       )}
     </aside>

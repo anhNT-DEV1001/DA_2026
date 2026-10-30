@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/common/app-header";
 import { DockRail } from "@/components/common/dock-rail";
 import { NavPanel } from "@/components/common/nav-panel";
 import { useAppShellStore } from "@/stores/app-shell-store";
+import { useChatRealtime } from "@/features/chats";
 
 /**
  * Khung ứng dụng: dock icon + panel menu con + header, nội dung nằm trong card bo góc.
@@ -19,6 +20,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const mobileOpen = useAppShellStore((s) => s.mobileOpen);
   const setMobileOpen = useAppShellStore((s) => s.setMobileOpen);
   const setSelectedRootId = useAppShellStore((s) => s.setSelectedRootId);
+  // Sidebar hội thoại + badge chưa đọc luôn đúng dù đang ở trang nào
+  useChatRealtime();
 
   // Điều hướng xong: menu gốc lại theo route, đóng overlay mobile
   React.useEffect(() => {

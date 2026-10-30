@@ -23,6 +23,7 @@ const ADD_WORKSPACE_MEMBER_PERMISSION = "WORKSPACE_CREATE";
 export const MENU_ALIAS = {
   workspace: "Workspace",
   spaces: "Spaces",
+  chat: "Chat",
 } as const;
 
 export interface NavBreadcrumbItem {
