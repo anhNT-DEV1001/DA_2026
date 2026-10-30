@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { Notification, NotificationRecipient } from './entities/index.js';
 import { WorkspaceMember } from '../workspaces/entities/index.js';
+import { ACTIVE_MEMBER_STATUSES } from '../workspaces/services/workspace-access.service.js';
 import { User } from '../users/entities/users.entity.js';
 import { CreateNotificationDto, NotificationRequest } from './dtos/index.js';
 import { WebsocketService } from '../../infrastructure/websockets/websocket.service.js';
@@ -233,7 +234,7 @@ export class NotificationService {
         select: { userId: true },
         where: {
           workspaceId: dto.workspaceId,
-          status: In(['MS001', 'active']),
+          status: In(ACTIVE_MEMBER_STATUSES),
         },
       });
       ids = members.map((m) => m.userId);

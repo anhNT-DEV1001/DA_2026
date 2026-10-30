@@ -46,7 +46,7 @@ export class TaskCommentService {
     if (!file) throw new BadRequestException('Vui lòng chọn ảnh');
     try {
       await this.source.transaction((manager) =>
-        this.tasks.access(manager, workspaceId, taskId, actorId),
+        this.tasks.taskAccess(manager, workspaceId, taskId, actorId),
       );
     } catch (error) {
       await unlink(file.path).catch(() => undefined);
@@ -76,7 +76,7 @@ export class TaskCommentService {
     actorId: number,
     query: TaskPageQuery,
   ) {
-    await this.tasks.access(this.source.manager, workspaceId, taskId, actorId);
+    await this.tasks.taskAccess(this.source.manager, workspaceId, taskId, actorId);
     const [items, total] = await this.source
       .getRepository(TaskComment)
       .createQueryBuilder('c')
@@ -104,7 +104,7 @@ export class TaskCommentService {
     if (isBlank(dto.content))
       throw new BadRequestException('Nội dung bình luận không được để trống');
     const { task, comment } = await this.source.transaction(async (manager) => {
-      const task = await this.tasks.access(manager, workspaceId, taskId, actorId);
+      const task = await this.tasks.taskAccess(manager, workspaceId, taskId, actorId);
       if (dto.parentId) {
         const parent = await this.comment(manager, taskId, dto.parentId);
         if (parent.parentId)
@@ -145,7 +145,7 @@ export class TaskCommentService {
       throw new BadRequestException('Nội dung bình luận không được để trống');
     let changed = false;
     const { task, comment } = await this.source.transaction(async (manager) => {
-      const task = await this.tasks.access(manager, workspaceId, taskId, actorId);
+      const task = await this.tasks.taskAccess(manager, workspaceId, taskId, actorId);
       const comment = await this.comment(manager, taskId, commentId, true);
       if (comment.authorId !== actorId)
         throw new ForbiddenException('Bạn chỉ có thể sửa bình luận của mình');
@@ -175,7 +175,7 @@ export class TaskCommentService {
     origin?: string,
   ) {
     const { task, comment } = await this.source.transaction(async (manager) => {
-      const task = await this.tasks.access(manager, workspaceId, taskId, actorId);
+      const task = await this.tasks.taskAccess(manager, workspaceId, taskId, actorId);
       const comment = await this.comment(manager, taskId, commentId, true);
       if (comment.authorId !== actorId)
         throw new ForbiddenException('Bạn chỉ có thể xóa bình luận của mình');

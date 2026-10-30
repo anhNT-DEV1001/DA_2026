@@ -11,6 +11,9 @@ import {
   PageMetadataResponse,
   PageResponse,
 } from '../../../common/responses/index.js';
+import { TaskRealtimeService } from '../../tasks/services/task-realtime.service.js';
+import { ChatRealtimeService } from '../../chats/services/chat-realtime.service.js';
+import { ACTIVE_MEMBER_STATUSES } from './workspace-access.service.js';
 
 @Injectable()
 export class SpaceMemberService {
@@ -21,6 +24,8 @@ export class SpaceMemberService {
     private readonly spaceRepo: Repository<Space>,
     @InjectRepository(WorkspaceMember)
     private readonly workspaceMemberRepo: Repository<WorkspaceMember>,
+    private readonly taskRealtime: TaskRealtimeService,
+    private readonly chatRealtime: ChatRealtimeService,
   ) {}
 
   /**
@@ -56,7 +61,7 @@ export class SpaceMemberService {
         `Người dùng #${userId} chưa là thành viên của workspace #${workspaceId}.`,
       );
     }
-    if (wm.status !== 'MS001') {
+    if (!ACTIVE_MEMBER_STATUSES.includes(wm.status)) {
       throw new BadRequestException(
         `Người dùng #${userId} chưa được phê duyệt vào workspace #${workspaceId}.`,
       );
@@ -219,6 +224,7 @@ export class SpaceMemberService {
 
     const sm = await this.spaceMemberRepo.findOne({
       where: { spaceId, workspaceMemberId },
+      relations: { workspaceMember: true },
     });
 
     if (!sm) {
@@ -227,7 +233,11 @@ export class SpaceMemberService {
       );
     }
 
+    const { userId } = sm.workspaceMember;
     await this.spaceMemberRepo.remove(sm);
+    // Đá các tab đang mở board của space này ra khỏi kênh realtime
+    void this.taskRealtime.revalidate(userId, workspaceId);
+    void this.chatRealtime.revalidate(userId);
 
     return {
       message: `Đã xóa thành viên #${workspaceMemberId} khỏi space #${spaceId} thành công.`,

@@ -13,12 +13,16 @@ import { Role, MasterData } from '../admin/entites/index.js';
 import { UsersModule } from '../users/users.module.js';
 import { NotificationModule } from '../notifications/notification.module.js';
 import { TasksModule } from '../tasks/tasks.module.js';
+import { WorkspaceAccessModule } from './workspace-access.module.js';
+import { ChatsModule } from '../chats/chats.module.js';
 
 @Module({
   imports: [
     UsersModule,
     NotificationModule,
     TasksModule,
+    WorkspaceAccessModule,
+    ChatsModule,
     TypeOrmModule.forFeature([Workspace, WorkspaceMember, Space, SpaceMember, Role, MasterData]),
   ],
   providers: [WorkspacesService, WorkspaceMemberService, SpaceService, SpaceMemberService, WorkspaceGuard, SpaceGuard],

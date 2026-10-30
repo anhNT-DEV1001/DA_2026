@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { DataSource, EntityManager, QueryFailedError } from 'typeorm';
 import { TaskStatus } from '../entities/task-status.entity.js';
-import { Space } from '../../workspaces/entities/space.entity.js';
+import { WorkspaceAccessService } from '../../workspaces/services/workspace-access.service.js';
 import { CreateTaskStatusDto, UpdateTaskStatusDto } from '../dtos/task.dto.js';
 import { TaskRealtimeService } from './task-realtime.service.js';
 
@@ -38,6 +38,7 @@ export class TaskStatusService {
   constructor(
     private readonly source: DataSource,
     private readonly realtime: TaskRealtimeService,
+    private readonly access: WorkspaceAccessService,
   ) {}
 
   /**
@@ -78,23 +79,8 @@ export class TaskStatusService {
       .execute();
   }
 
-  private async resolveSpace(
-    manager: EntityManager,
-    workspaceId: number,
-    spaceId: number,
-  ): Promise<Space> {
-    const space = await manager.getRepository(Space).findOne({
-      select: { id: true, workspaceId: true },
-      where: { id: spaceId },
-    });
-    if (!space) throw new NotFoundException('Không tìm thấy space');
-    if (space.workspaceId !== workspaceId)
-      throw new BadRequestException('Space không thuộc workspace này');
-    return space;
-  }
-
-  async list(workspaceId: number, spaceId: number) {
-    await this.resolveSpace(this.source.manager, workspaceId, spaceId);
+  async list(workspaceId: number, spaceId: number, actorId: number) {
+    await this.access.assertSpaceMember(actorId, workspaceId, spaceId);
     return this.source.getRepository(TaskStatus).find({
       where: { spaceId },
       order: { displayOrder: 'ASC' },
@@ -108,7 +94,9 @@ export class TaskStatusService {
     origin?: string,
   ) {
     const status = await this.source.transaction(async (manager) => {
-      await this.resolveSpace(manager, workspaceId, dto.spaceId);
+      await this.access.assertSpaceMember(actorId, workspaceId, dto.spaceId, {
+        manager,
+      });
       const status = manager.getRepository(TaskStatus).create({
         spaceId: dto.spaceId,
         code: dto.code,
@@ -145,7 +133,9 @@ export class TaskStatusService {
     origin?: string,
   ) {
     const saved = await this.source.transaction(async (manager) => {
-      await this.resolveSpace(manager, workspaceId, spaceId);
+      await this.access.assertSpaceMember(actorId, workspaceId, spaceId, {
+        manager,
+      });
       const repo = manager.getRepository(TaskStatus);
       const status = await repo.findOne({
         where: { id: statusId, spaceId },
@@ -169,11 +159,13 @@ export class TaskStatusService {
     workspaceId: number,
     spaceId: number,
     statusId: number,
-    actorId?: number,
+    actorId: number,
     origin?: string,
   ) {
     const result = await this.source.transaction(async (manager) => {
-      await this.resolveSpace(manager, workspaceId, spaceId);
+      await this.access.assertSpaceMember(actorId, workspaceId, spaceId, {
+        manager,
+      });
       const repo = manager.getRepository(TaskStatus);
       const status = await repo.findOne({
         where: { id: statusId, spaceId },

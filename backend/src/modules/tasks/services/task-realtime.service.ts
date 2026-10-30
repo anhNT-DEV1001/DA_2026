@@ -1,12 +1,9 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { DataSource, In } from 'typeorm';
-import { Space, Workspace, WorkspaceMember } from '../../workspaces/entities/index.js';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { WebsocketService } from '../../../infrastructure/websockets/websocket.service.js';
 import { ChannelRegistry } from '../../../infrastructure/websockets/registries/index.js';
+import { WorkspaceAccessService } from '../../workspaces/services/workspace-access.service.js';
 
 export const TASK_SPACE_CHANNEL = 'task-space';
-
-const activeStatuses = ['MS001', 'active'];
 
 export type TaskRealtimeEvent =
   | 'task.created'
@@ -26,10 +23,12 @@ export const taskSpaceTopic = (workspaceId: number, spaceId: number) =>
 /** Đẩy thay đổi của task/comment/trạng thái tới các client đang xem cùng space */
 @Injectable()
 export class TaskRealtimeService implements OnModuleInit {
+  private readonly logger = new Logger(TaskRealtimeService.name);
+
   constructor(
-    private readonly source: DataSource,
     private readonly websocket: WebsocketService,
     private readonly registry: ChannelRegistry,
+    private readonly access: WorkspaceAccessService,
   ) {}
 
   onModuleInit() {
@@ -39,33 +38,29 @@ export class TaskRealtimeService implements OnModuleInit {
     });
   }
 
-  /** Giống quyền xem task qua API: owner hoặc thành viên active của workspace, space thuộc workspace */
-  private async canAccess(userId: number, param?: string) {
-    const [workspaceId, spaceId] = (param ?? '').split(':').map(Number);
-    if (
-      !Number.isSafeInteger(workspaceId) ||
-      !Number.isSafeInteger(spaceId) ||
-      workspaceId < 1 ||
-      spaceId < 1
-    )
-      return false;
+  /** Cùng quyền với API task: owner workspace hoặc thành viên của space */
+  private canAccess(userId: number, param?: string) {
+    const parts = (param ?? '').split(':');
+    if (parts.length !== 2) return Promise.resolve(false);
+    const [workspaceId, spaceId] = parts.map(Number);
+    return this.access.canAccessSpace(userId, workspaceId, spaceId);
+  }
 
-    const [workspace, spaceExists] = await Promise.all([
-      this.source.getRepository(Workspace).findOne({
-        select: { id: true, ownerId: true },
-        where: { id: workspaceId },
-      }),
-      this.source
-        .getRepository(Space)
-        .existsBy({ id: spaceId, workspaceId }),
-    ]);
-    if (!workspace || !spaceExists) return false;
-    if (workspace.ownerId === userId) return true;
-    return this.source.getRepository(WorkspaceMember).existsBy({
-      workspaceId,
-      userId,
-      status: In(activeStatuses),
-    });
+  /** Gọi sau khi membership của user trong workspace thay đổi: rời các space không còn quyền xem */
+  async revalidate(userId: number, workspaceId: number) {
+    const prefix = `${TASK_SPACE_CHANNEL}:${workspaceId}:`;
+    try {
+      await this.websocket.pruneTopics(
+        userId,
+        (topic) =>
+          !topic.startsWith(prefix) ||
+          this.canAccess(userId, topic.slice(TASK_SPACE_CHANNEL.length + 1)),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Không thể thu hồi realtime của user #${userId}: ${(error as Error).message}`,
+      );
+    }
   }
 
   /** Gọi sau khi transaction đã commit; `origin` là socket.id của tab gây ra thay đổi */

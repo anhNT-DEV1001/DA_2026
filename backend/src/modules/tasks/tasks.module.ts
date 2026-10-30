@@ -9,11 +9,15 @@ import { TasksService } from './services/tasks.service.js';
 import { TaskCommentService } from './services/task-comment.service.js';
 import { TaskRealtimeService } from './services/task-realtime.service.js';
 import { TasksController } from './tasks.controller.js';
+import { WorkspaceAccessModule } from '../workspaces/workspace-access.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Task, TaskAssigned, TaskStatus, TaskActivity, TaskComment])],
+  imports: [
+    WorkspaceAccessModule,
+    TypeOrmModule.forFeature([Task, TaskAssigned, TaskStatus, TaskActivity, TaskComment]),
+  ],
   controllers: [TasksController],
   providers: [TaskRealtimeService, TaskStatusService, TaskAssignedService, TaskActivityService, TasksService, TaskCommentService],
-  exports: [TaskStatusService, TaskActivityService],
+  exports: [TaskStatusService, TaskActivityService, TaskRealtimeService],
 })
 export class TasksModule {}

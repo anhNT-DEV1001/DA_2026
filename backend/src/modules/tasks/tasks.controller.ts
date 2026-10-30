@@ -63,8 +63,9 @@ export class TasksController {
   statuses(
     @Param('workspaceId', ParseIntPipe) workspaceId: number,
     @Query('spaceId', new ParseIntPipe({ exceptionFactory: () => new BadRequestException('spaceId là bắt buộc và phải là số nguyên dương') })) spaceId: number,
+    @CurrentUser('user') user: UserResponse,
   ) {
-    return this.taskStatuses.list(workspaceId, spaceId);
+    return this.taskStatuses.list(workspaceId, spaceId, user.id!);
   }
 
   @Post('statuses')

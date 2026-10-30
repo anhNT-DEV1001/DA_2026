@@ -3,11 +3,9 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { DataSource, EntityManager, In } from 'typeorm';
-import { Workspace } from '../../workspaces/entities/workspace.entity.js';
-import { WorkspaceMember } from '../../workspaces/entities/workspace-member.entity.js';
+import { WorkspaceAccessService } from '../../workspaces/services/workspace-access.service.js';
 import { Task, TaskAssigned, TaskStatus } from '../entities/index.js';
 import { MasterData } from '../../admin/entites/index.js';
 import {
@@ -25,7 +23,6 @@ import {
 import { TaskActivityService } from './task-activity.service.js';
 import { TaskRealtimeService } from './task-realtime.service.js';
 
-const activeStatuses = ['MS001', 'active'];
 const PRIORITY_GROUP = 'PRIORITY';
 const DEFAULT_PRIORITY = 'PRIORITY002';
 // Khoảng cách position giữa hai task liền kề; nhỏ hơn MIN_GAP thì đánh số lại cột
@@ -38,6 +35,7 @@ export class TasksService {
     private readonly source: DataSource,
     private readonly activity: TaskActivityService,
     private readonly realtime: TaskRealtimeService,
+    private readonly access: WorkspaceAccessService,
   ) {}
 
   private positiveId(id: number) {
@@ -45,32 +43,18 @@ export class TasksService {
       throw new BadRequestException('ID phải là số nguyên dương');
   }
 
-  private async workspace(
-    manager: EntityManager,
+  /** Lọc theo các space user được xem; owner (null) không bị lọc */
+  private async spaceScope(
     workspaceId: number,
     actorId: number,
-    lock = false,
-  ) {
-    this.positiveId(workspaceId);
-    if (!actorId) throw new UnauthorizedException();
-    const workspace = await manager.getRepository(Workspace).findOne({
-      select: { id: true, ownerId: true },
-      where: { id: workspaceId },
-      ...(lock ? { lock: { mode: 'pessimistic_read' as const } } : {}),
-    });
-    if (!workspace) throw new NotFoundException('Không tìm thấy workspace');
-    if (workspace.ownerId !== actorId) {
-      const member = await manager.getRepository(WorkspaceMember).findOne({
-        select: { id: true },
-        where: { workspaceId, userId: actorId, status: In(activeStatuses) },
-        ...(lock ? { lock: { mode: 'pessimistic_read' as const } } : {}),
-      });
-      if (!member)
-        throw new ForbiddenException(
-          'Bạn không phải thành viên đang hoạt động trong workspace',
-        );
+    spaceId?: number,
+  ): Promise<number[] | null> {
+    if (spaceId !== undefined) {
+      await this.access.assertSpaceMember(actorId, workspaceId, spaceId);
+      return [spaceId];
     }
-    return workspace;
+    await this.access.assertWorkspaceMember(actorId, workspaceId);
+    return this.access.accessibleSpaceIds(actorId, workspaceId);
   }
 
   private async task(
@@ -88,6 +72,30 @@ export class TasksService {
     });
     if (!task)
       throw new NotFoundException('Không tìm thấy task trong workspace');
+    return task;
+  }
+
+  /** Kiểm tra quyền trên space chứa task rồi trả về task; `lock` khoá cả membership lẫn task */
+  private async guardedTask(
+    manager: EntityManager,
+    workspaceId: number,
+    taskId: number,
+    actorId: number,
+    { lock = false, withDeleted = false } = {},
+  ) {
+    const { isOwner } = await this.access.assertWorkspaceMember(
+      actorId,
+      workspaceId,
+      { manager, lock },
+    );
+    const task = await this.task(manager, workspaceId, taskId, lock, withDeleted);
+    if (task.spaceId)
+      await this.access.assertSpaceMember(actorId, workspaceId, task.spaceId, {
+        manager,
+        lock,
+      });
+    else if (!isOwner)
+      throw new ForbiddenException('Task không thuộc space nào bạn tham gia');
     return task;
   }
 
@@ -196,13 +204,18 @@ export class TasksService {
   }
 
   async list(workspaceId: number, actorId: number, query: TaskListQuery) {
-    await this.workspace(this.source.manager, workspaceId, actorId);
+    const spaceIds = await this.spaceScope(workspaceId, actorId, query.spaceId);
+    if (spaceIds?.length === 0)
+      return new PageResponse(
+        [],
+        new PageMetadataResponse({ pageRequest: query, itemCount: 0 }),
+      );
     const builder = this.source
       .getRepository(Task)
       .createQueryBuilder('task')
       .where('task.workspaceId = :workspaceId', { workspaceId });
-    if (query.spaceId !== undefined)
-      builder.andWhere('task.spaceId = :spaceId', { spaceId: query.spaceId });
+    if (spaceIds)
+      builder.andWhere('task.spaceId IN (:...spaceIds)', { spaceIds });
     if (query.search)
       builder.andWhere('task.title ILIKE :search', {
         search: `%${query.search}%`,
@@ -267,8 +280,12 @@ export class TasksService {
   }
 
   async detail(workspaceId: number, taskId: number, actorId: number) {
-    await this.workspace(this.source.manager, workspaceId, actorId);
-    const task = await this.task(this.source.manager, workspaceId, taskId);
+    const task = await this.guardedTask(
+      this.source.manager,
+      workspaceId,
+      taskId,
+      actorId,
+    );
     const assigns = await this.source.getRepository(TaskAssigned).find({
       select: { userId: true },
       where: { taskId: task.id },
@@ -276,15 +293,15 @@ export class TasksService {
     return Object.assign(task, { assigneeIds: assigns.map((a) => a.userId) });
   }
 
-  /** Kiểm tra quyền thành viên workspace và trả về task (dùng cho comment) */
-  async access(
+  /** Kiểm tra quyền trên space của task và trả về task (dùng cho comment, assignee) */
+  taskAccess(
     manager: EntityManager,
     workspaceId: number,
     taskId: number,
     actorId: number,
+    lock = false,
   ) {
-    await this.workspace(manager, workspaceId, actorId);
-    return this.task(manager, workspaceId, taskId);
+    return this.guardedTask(manager, workspaceId, taskId, actorId, { lock });
   }
 
   async workspaceActivities(
@@ -292,8 +309,8 @@ export class TasksService {
     actorId: number,
     query: TaskActivityQuery,
   ) {
-    await this.workspace(this.source.manager, workspaceId, actorId);
-    return this.activity.listByWorkspace(workspaceId, query);
+    const spaceIds = await this.spaceScope(workspaceId, actorId, query.spaceId);
+    return this.activity.listByWorkspace(workspaceId, spaceIds, query);
   }
 
   async activities(
@@ -302,8 +319,9 @@ export class TasksService {
     actorId: number,
     query: TaskPageQuery,
   ) {
-    await this.workspace(this.source.manager, workspaceId, actorId);
-    await this.task(this.source.manager, workspaceId, taskId, false, true);
+    await this.guardedTask(this.source.manager, workspaceId, taskId, actorId, {
+      withDeleted: true,
+    });
     return this.activity.listByTask(workspaceId, taskId, query);
   }
 
@@ -314,7 +332,10 @@ export class TasksService {
     origin?: string,
   ) {
     const created = await this.source.transaction(async (manager) => {
-      await this.workspace(manager, workspaceId, actorId, true);
+      await this.access.assertSpaceMember(actorId, workspaceId, dto.spaceId, {
+        manager,
+        lock: true,
+      });
       // Không phụ thuộc mã 'todo': trạng thái chưa hoàn thành đầu tiên của space
       const defaultStatus =
         dto.statusId === undefined
@@ -372,8 +393,9 @@ export class TasksService {
     let fromStatusId: number | undefined;
     let changed = false;
     const updated = await this.source.transaction(async (manager) => {
-      await this.workspace(manager, workspaceId, actorId, true);
-      const task = await this.task(manager, workspaceId, taskId, true);
+      const task = await this.guardedTask(manager, workspaceId, taskId, actorId, {
+        lock: true,
+      });
       const before = await this.activity.snapshot(manager, task);
       fromStatusId = task.statusId;
       for (const key of [
@@ -430,8 +452,9 @@ export class TasksService {
   ) {
     let fromStatusId: number | undefined;
     const moved = await this.source.transaction(async (manager) => {
-      await this.workspace(manager, workspaceId, actorId, true);
-      const task = await this.task(manager, workspaceId, taskId, true);
+      const task = await this.guardedTask(manager, workspaceId, taskId, actorId, {
+        lock: true,
+      });
       const before = await this.activity.snapshot(manager, task);
       fromStatusId = task.statusId;
       task.statusId = dto.statusId;
@@ -474,8 +497,9 @@ export class TasksService {
     origin?: string,
   ) {
     const removed = await this.source.transaction(async (manager) => {
-      await this.workspace(manager, workspaceId, actorId, true);
-      const task = await this.task(manager, workspaceId, taskId, true);
+      const task = await this.guardedTask(manager, workspaceId, taskId, actorId, {
+        lock: true,
+      });
       const before = await this.activity.snapshot(manager, task);
       task.deletedBy = actorId;
       task.updatedBy = actorId;

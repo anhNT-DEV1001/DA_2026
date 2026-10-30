@@ -3,21 +3,14 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuthUser } from '../../auth/dtos/index.js';
-import { Space, SpaceMember } from '../entities/index.js';
+import { WorkspaceAccessService } from '../services/workspace-access.service.js';
 
+/** Route dạng ':id/spaces/:spaceId': owner workspace hoặc thành viên của space */
 @Injectable()
 export class SpaceGuard implements CanActivate {
-  constructor(
-    @InjectRepository(Space)
-    private readonly spaceRepo: Repository<Space>,
-    @InjectRepository(SpaceMember)
-    private readonly spaceMemberRepo: Repository<SpaceMember>,
-  ) {}
+  constructor(private readonly access: WorkspaceAccessService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -30,46 +23,13 @@ export class SpaceGuard implements CanActivate {
       );
     }
 
-    const { spaceId } = request.params;
+    const { id, spaceId } = request.params;
 
     if (!spaceId) {
       return true;
     }
 
-    // 1. Kiểm tra space có tồn tại không, load kèm workspace để kiểm tra owner
-    const space = await this.spaceRepo.findOne({
-      where: { id: Number(spaceId) },
-      relations: { workspace: true },
-    });
-
-    if (!space) {
-      throw new NotFoundException('Không tìm thấy space.');
-    }
-
-    // 2. Workspace owner có toàn quyền
-    if (space.workspace.ownerId === userId) {
-      return true;
-    }
-
-    // 3. Kiểm tra user có phải space member không
-    // SpaceMember.workspaceMember.userId = userId AND SpaceMember.spaceId = spaceId
-    const isMember = await this.spaceMemberRepo
-      .createQueryBuilder('sm')
-      .innerJoin(
-        'sm.workspaceMember',
-        'wm',
-        'wm.userId = :userId AND wm.status = :status',
-        { userId, status: 'MS001' },
-      )
-      .where('sm.spaceId = :spaceId', { spaceId: Number(spaceId) })
-      .getExists();
-
-    if (!isMember) {
-      throw new ForbiddenException(
-        'Bạn không phải là thành viên của space này.',
-      );
-    }
-
+    await this.access.assertSpaceMember(userId, Number(id), Number(spaceId));
     return true;
   }
 }

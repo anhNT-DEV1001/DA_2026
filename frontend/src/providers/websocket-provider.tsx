@@ -41,6 +41,8 @@ type RealtimeCtx = {
   on: <T = unknown>(channel: string, fn: Handler<T>) => () => void;
   subscribe: (topic: string) => Promise<SubscribeResult>;
   unsubscribe: (topic: string) => void;
+  /** Gửi sự kiện tạm thời lên server (vd: 'chat.typing'); undefined nếu chưa kết nối hoặc hết thời gian chờ */
+  emit: <T = unknown>(event: string, payload: unknown) => Promise<T | undefined>;
 };
 
 // Channel đặc biệt nhận mọi message
@@ -209,9 +211,22 @@ export function WebsocketProvider({ children }: { children: ReactNode }) {
     socketRef.current?.emit("unsubscribe", { topic });
   }, []);
 
+  const emit = useCallback(
+    async <T,>(event: string, payload: unknown): Promise<T | undefined> => {
+      const s = socketRef.current;
+      if (!s || !s.connected) return undefined;
+      try {
+        return await s.timeout(ACK_TIMEOUT_MS).emitWithAck(event, payload);
+      } catch {
+        return undefined;
+      }
+    },
+    [],
+  );
+
   const value = useMemo(
-    () => ({ status, on, subscribe, unsubscribe }),
-    [status, on, subscribe, unsubscribe],
+    () => ({ status, on, subscribe, unsubscribe, emit }),
+    [status, on, subscribe, unsubscribe, emit],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

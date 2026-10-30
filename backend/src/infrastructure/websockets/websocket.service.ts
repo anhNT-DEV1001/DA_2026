@@ -34,4 +34,27 @@ export class WebsocketService {
       envelope,
     );
   }
+
+  /**
+   * Cho mọi thiết bị của user rời các topic mà `keep` trả về false.
+   * Gọi khi quyền của user thay đổi (bị xoá khỏi space/workspace), vì `subscribe` chỉ kiểm tra quyền một lần.
+   */
+  async pruneTopics(
+    userId: number | string,
+    keep: (topic: string) => boolean | Promise<boolean>,
+  ) {
+    const prefix = topicRoom('');
+    const sockets = await this.gateway.server.in(userRoom(userId)).fetchSockets();
+    const topics = new Set(
+      sockets.flatMap((socket) =>
+        [...socket.rooms]
+          .filter((room) => room.startsWith(prefix))
+          .map((room) => room.slice(prefix.length)),
+      ),
+    );
+    for (const topic of topics) {
+      if (await keep(topic)) continue;
+      for (const socket of sockets) socket.leave(topicRoom(topic));
+    }
+  }
 }

@@ -19,7 +19,7 @@ import { UsersService } from '../../../modules/users/users.service.js';
 export const userRoom = (userId: number | string) => `user:${userId}`;
 export const topicRoom = (topic: string) => `topic:${topic}`;
 
-const getAllowedOrigins = (): string[] => {
+export const getAllowedOrigins = (): string[] => {
   const raw =
     process.env.CORS_ORIGIN ??
     process.env.FRONTEND_URL ??

@@ -4,6 +4,7 @@ import { createObserveModule } from '@nestjs/observe';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
 import { QueueModule } from './infrastructure/queue/queue.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
@@ -18,6 +19,7 @@ import { TasksModule } from './modules/tasks/tasks.module.js';
 import { WebsocketModule } from './infrastructure/websockets/websocket.module.js';
 import { NotificationModule } from './modules/notifications/notification.module.js';
 import { NotesModule } from './modules/notes/notes.module.js';
+import { ChatsModule } from './modules/chats/chats.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -28,6 +30,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       envFilePath: '.env',
     }),
     ThrottlerModule.forRoot(throttlerConfig),
+    ScheduleModule.forRoot(),
     // Distributed tracing, auto-correlated logs, request/job metrics, error
     // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
     ObserveModule.forRoot({
@@ -45,6 +48,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     TasksModule,
     NotificationModule,
     NotesModule,
+    ChatsModule,
   ],
   controllers: [AppController],
   providers: [

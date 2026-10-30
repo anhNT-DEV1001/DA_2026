@@ -34,7 +34,8 @@ const DEFAULT_MAX_SIZES: Record<AllowedFileType, number> = {
 };
 
 interface MulterCustomOptions {
-  folder: string; // Thư mục con trong ./uploads (vd: 'avatars', 'documents', 'videos')
+  folder: string; // Thư mục con trong root (vd: 'avatars', 'documents', 'videos')
+  root?: string; // Mặc định './uploads' (public qua /uploads); dùng thư mục khác cho file cần kiểm tra quyền khi tải
   allowedTypes: AllowedFileType[]; // Danh sách loại file cho phép (vd: ['image'] hoặc ['pdf', 'doc'])
   maxFileSize?: number; // Tuỳ chỉnh dung lượng tối đa (bytes), nếu không truyền sẽ lấy theo loại lớn nhất
 }
@@ -45,7 +46,7 @@ interface MulterCustomOptions {
 export const createMulterOptions = (
   options: MulterCustomOptions,
 ): MulterOptions => {
-  const { folder, allowedTypes, maxFileSize } = options;
+  const { folder, root = './uploads', allowedTypes, maxFileSize } = options;
 
   // Tính dung lượng tối đa (lấy mức cao nhất nếu không truyền thủ công)
   const calculatedMaxSize =
@@ -55,7 +56,7 @@ export const createMulterOptions = (
   return {
     storage: diskStorage({
       destination: (req, file, cb) => {
-        const uploadPath = `./uploads/${folder}`;
+        const uploadPath = `${root}/${folder}`;
         // Tự động tạo cây thư mục nếu chưa tồn tại
         if (!existsSync(uploadPath)) {
           mkdirSync(uploadPath, { recursive: true });

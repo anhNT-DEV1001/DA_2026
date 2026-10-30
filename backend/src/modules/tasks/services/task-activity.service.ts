@@ -137,14 +137,23 @@ export class TaskActivityService {
     );
   }
 
-  async listByWorkspace(workspaceId: number, query: TaskActivityQuery) {
+  /** `spaceIds`: các space được xem; null = mọi space (owner) */
+  async listByWorkspace(
+    workspaceId: number,
+    spaceIds: number[] | null,
+    query: TaskActivityQuery,
+  ) {
+    if (spaceIds?.length === 0)
+      return new PageResponse(
+        [],
+        new PageMetadataResponse({ pageRequest: query, itemCount: 0 }),
+      );
     const qb = this.source
       .getRepository(TaskActivity)
       .createQueryBuilder('a')
       .withDeleted()
       .innerJoin('a.task', 't', 't.workspaceId = :workspaceId', { workspaceId });
-    if (query.spaceId)
-      qb.andWhere('t.spaceId = :spaceId', { spaceId: query.spaceId });
+    if (spaceIds) qb.andWhere('t.spaceId IN (:...spaceIds)', { spaceIds });
     const [items, total] = await qb
       .orderBy('a.id', 'DESC')
       .skip((query.page - 1) * query.limit)

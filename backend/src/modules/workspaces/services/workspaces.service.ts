@@ -19,6 +19,7 @@ import {
 } from '../../../common/responses/index.js';
 import { slugify } from '../utils/slug.util.js';
 import WorkspaceSearch from '../dtos/workspace.dto.js';
+import { ConversationService } from '../../chats/services/conversation.service.js';
 
 @Injectable()
 export class WorkspacesService {
@@ -28,6 +29,7 @@ export class WorkspacesService {
     @InjectRepository(WorkspaceMember)
     private readonly memberRepo: Repository<WorkspaceMember>,
     private readonly dataSource: DataSource,
+    private readonly conversations: ConversationService,
   ) {}
 
   private attachModeName(ws: Workspace): Workspace {
@@ -294,6 +296,12 @@ export class WorkspacesService {
         await transactionalEntityManager.save(
           WorkspaceMember,
           workspaceMemData,
+        );
+
+        await this.conversations.createWorkspaceChannel(
+          transactionalEntityManager,
+          workspace.id,
+          user?.id ?? null,
         );
 
         return workspace;

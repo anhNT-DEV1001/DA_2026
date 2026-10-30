@@ -21,6 +21,8 @@ import {
 } from '../../../common/responses/index.js';
 import { NotificationService } from '../../notifications/notification.service.js';
 import { CreateNotificationDto } from '../../notifications/dtos/index.js';
+import { TaskRealtimeService } from '../../tasks/services/task-realtime.service.js';
+import { ChatRealtimeService } from '../../chats/services/chat-realtime.service.js';
 
 @Injectable()
 export class WorkspaceMemberService {
@@ -35,6 +37,8 @@ export class WorkspaceMemberService {
     private readonly roleRepo: Repository<Role>,
     private readonly userService: UsersService,
     private readonly notificationService: NotificationService,
+    private readonly taskRealtime: TaskRealtimeService,
+    private readonly chatRealtime: ChatRealtimeService,
   ) {}
 
   /**
@@ -432,6 +436,8 @@ export class WorkspaceMemberService {
     member.status = 'MS003';
     member.updatedBy = currentUserId ?? null;
     await this.workmemRepo.save(member);
+    void this.taskRealtime.revalidate(userId, workspaceId);
+    void this.chatRealtime.revalidate(userId);
     await this.notify(
       workspace,
       {
@@ -496,6 +502,9 @@ export class WorkspaceMemberService {
 
     member.updatedBy = currentUserId ?? null;
     await this.workmemRepo.save(member);
+    if (dto.status !== undefined)
+      void this.taskRealtime.revalidate(userId, workspaceId);
+      void this.chatRealtime.revalidate(userId);
 
     return this.findOne(workspaceId, userId);
   }
@@ -532,6 +541,8 @@ export class WorkspaceMemberService {
     }
 
     await this.workmemRepo.remove(member);
+    void this.taskRealtime.revalidate(userId, workspaceId);
+    void this.chatRealtime.revalidate(userId);
 
     return {
       message: `Đã xóa thành viên #${userId} khỏi workspace #${workspaceId} thành công.`,

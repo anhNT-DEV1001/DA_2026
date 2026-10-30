@@ -4,8 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, ILike, Repository } from 'typeorm';
-import { Space } from '../entities/space.entity.js';
+import { DataSource, ILike, In, Repository } from 'typeorm';
+import { Space, SpaceMember, WorkspaceMember } from '../entities/index.js';
+import { ACTIVE_MEMBER_STATUSES } from './workspace-access.service.js';
+import { ConversationService } from '../../chats/services/conversation.service.js';
 import {
   CreateSpaceDto,
   SpaceRequest,
@@ -25,6 +27,7 @@ export class SpaceService {
     private readonly spaceRepo: Repository<Space>,
     private readonly dataSource: DataSource,
     private readonly taskStatusService: TaskStatusService,
+    private readonly conversations: ConversationService,
   ) {}
 
   async findAll(
@@ -97,6 +100,28 @@ export class SpaceService {
         user?.id ?? null,
         dto.statuses,
       );
+      // Người tạo là thành viên đầu tiên, nếu không sẽ không thấy space mình vừa tạo
+      const creator = user?.id
+        ? await manager.getRepository(WorkspaceMember).findOne({
+            select: { id: true },
+            where: {
+              workspaceId,
+              userId: user.id,
+              status: In(ACTIVE_MEMBER_STATUSES),
+            },
+          })
+        : null;
+      if (creator)
+        await manager.getRepository(SpaceMember).insert({
+          spaceId: space.id,
+          workspaceMemberId: creator.id,
+          createdBy: user!.id,
+        });
+      await this.conversations.createSpaceChannel(
+        manager,
+        space,
+        user?.id ?? null,
+      );
       return space;
     });
   }
@@ -148,6 +173,15 @@ export class SpaceService {
   ): Promise<Space> {
     const space = await this.findOne(workspaceId, spaceId);
     space.deletedBy = user?.id ?? null;
-    return this.spaceRepo.softRemove(space);
+    return this.dataSource.transaction(async (manager) => {
+      const removed = await manager.getRepository(Space).softRemove(space);
+      // Giữ lịch sử chat nhưng không cho gửi thêm
+      await this.conversations.archiveSpaceChannel(
+        spaceId,
+        user?.id ?? null,
+        manager,
+      );
+      return removed;
+    });
   }
 }

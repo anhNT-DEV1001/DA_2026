@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthUser } from '../../auth/dtos/index.js';
 import { Workspace } from '../entities/index.js';
+import { ACTIVE_MEMBER_STATUSES } from '../services/workspace-access.service.js';
 
 @Injectable()
 export class WorkspaceGuard implements CanActivate {
@@ -52,7 +53,7 @@ export class WorkspaceGuard implements CanActivate {
       return true;
     }
 
-    // 3. Kiểm tra user có phải là thành viên chính thức (MS001 / active) hay không
+    // 3. Kiểm tra user có phải là thành viên đang hoạt động hay không
     const isMember = await this.workspaceRepo
       .createQueryBuilder('ws')
       .innerJoin(
@@ -61,7 +62,7 @@ export class WorkspaceGuard implements CanActivate {
         'member.userId = :userId AND member.status IN (:...statuses)',
         {
           userId,
-          statuses: ['MS001'], // Chỉ kiểm tra các thành viên có trạng thái active (MS001)
+          statuses: ACTIVE_MEMBER_STATUSES,
         },
       )
       .where('ws.id = :workspaceId', { workspaceId: workspace.id })
